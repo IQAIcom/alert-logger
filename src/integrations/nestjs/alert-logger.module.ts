@@ -35,7 +35,10 @@ export class AlertLoggerModule implements NestModule {
       },
       {
         provide: ALERT_LOGGER_INSTANCE,
-        useFactory: () => AlertLogger.init(options),
+        useFactory: () => {
+          AlertLogger.reset()
+          return AlertLogger.init(options)
+        },
       },
       AlertLoggerService,
     ]
@@ -65,8 +68,10 @@ export class AlertLoggerModule implements NestModule {
       },
       {
         provide: ALERT_LOGGER_INSTANCE,
-        useFactory: (config: AlertLoggerModuleOptions) =>
-          AlertLogger.init(config),
+        useFactory: (config: AlertLoggerModuleOptions) => {
+          AlertLogger.reset()
+          return AlertLogger.init(config)
+        },
         inject: [ALERT_LOGGER_OPTIONS],
       },
       AlertLoggerService,
