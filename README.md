@@ -4,7 +4,7 @@ Smart alert aggregation for any destination. One call to log everywhere — Disc
 
 Stop drowning in alert storms. `@iqai/alert-logger` groups repeated errors using exponential suppression, sends periodic digests during sustained incidents, and notifies you when issues resolve — automatically.
 
-## Features
+## ✨ Features
 
 - **Unified API** — `logger.error('msg', error, { fields })` routes to every configured adapter
 - **Exponential suppression** — alerts fire at 1, 2, 4, 8, 16, 32, 64... then switch to periodic digests
@@ -20,7 +20,7 @@ Stop drowning in alert storms. `@iqai/alert-logger` groups repeated errors using
 - **Rate-limit aware** — respects per-adapter limits, queues on failure, drains on recovery
 - **Zero framework deps in core** — just `node:crypto` and `fetch`
 
-## Install
+## 📦 Install
 
 ```bash
 npm install @iqai/alert-logger
@@ -30,7 +30,7 @@ pnpm add @iqai/alert-logger
 yarn add @iqai/alert-logger
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Standalone (any Node.js project)
 
@@ -132,7 +132,7 @@ export { captureRequestError as onRequestError }
 
 That's it. All server-side errors (API routes, server components, server actions) are captured automatically.
 
-## How Aggregation Works
+## 🧠 How Aggregation Works
 
 When the same error fires repeatedly, the library doesn't spam your channel:
 
@@ -145,7 +145,7 @@ When the same error fires repeatedly, the library doesn't spam your channel:
 
 Errors are grouped by **fingerprint** — the library strips variable parts (IDs, timestamps, UUIDs, hex addresses) from the error message and hashes it with the top stack frames. Same bug, different request = same group.
 
-## Per-Environment Config
+## 🌍 Per-Environment Config
 
 Same codebase, different behavior per environment. Dev won't bug you as much as prod:
 
@@ -175,7 +175,7 @@ AlertLogger.init({
 
 Every alert is prefixed with an environment badge (`[PROD]`, `[STG]`, `[DEV]`) so you never mistake staging for production.
 
-## Multi-Channel Routing
+## 📡 Multi-Channel Routing
 
 Route alerts to different webhooks by severity or tags:
 
@@ -199,7 +199,7 @@ AlertLogger.init({
 })
 ```
 
-## Custom Adapters
+## 🔌 Custom Adapters
 
 Implement the `AlertAdapter` interface to send alerts anywhere:
 
@@ -220,7 +220,7 @@ class PagerDutyAdapter implements AlertAdapter {
 }
 ```
 
-## Full Configuration
+## ⚙️ Full Configuration
 
 ```ts
 AlertLogger.init({
@@ -266,7 +266,7 @@ AlertLogger.init({
 })
 ```
 
-## Adapters Ecosystem
+## 🧩 Adapters Ecosystem
 
 | Adapter | Package | Status |
 |---------|---------|--------|
@@ -276,10 +276,10 @@ AlertLogger.init({
 | Slack | `@iqai/alert-logger-slack` | Planned |
 | Telegram | `@iqai/alert-logger-telegram` | Planned |
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## License
+## 📄 License
 
 MIT
