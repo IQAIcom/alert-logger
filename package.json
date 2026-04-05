@@ -1,0 +1,64 @@
+{
+  "name": "@iqai/alert-logger",
+  "version": "0.1.0",
+  "description": "Smart alert aggregation for any destination — Discord, Sentry, Slack, console, or your own adapter",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IQAIcom/alert-logger"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./nestjs": {
+      "import": "./dist/integrations/nestjs/index.js",
+      "types": "./dist/integrations/nestjs/index.d.ts"
+    },
+    "./nextjs": {
+      "node": {
+        "import": "./dist/integrations/nextjs/index.js",
+        "types": "./dist/integrations/nextjs/index.d.ts"
+      },
+      "default": null
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">=10",
+    "@nestjs/config": ">=3",
+    "next": ">=14"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/config": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
