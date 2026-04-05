@@ -38,7 +38,14 @@
 - Ping configuration: map level → mention strings
 - Cascade: tag match → level match → default adapter
 
-### 1.6 AlertLogger (orchestrator)
+### 1.6 Environment configuration
+- Per-environment overrides: merge environment-specific config over root config at init
+- Support `production`, `staging`, `development` (and custom environment names)
+- Override: levels, pings, aggregation thresholds per environment
+- Environment badges: prefix embed titles with `[PROD]`, `[STG]`, `[DEV]`
+- Badge mapping configurable for custom environment names
+
+### 1.7 AlertLogger (orchestrator)
 - `AlertLogger.init(config)` — returns singleton instance
 - Methods: `.info()`, `.warn()`, `.error()`, `.critical()`
 - Pipeline: validate → fingerprint → aggregate → route → adapter.send()
@@ -87,6 +94,9 @@
 - `AlertLoggerService` — injectable wrapper around AlertLogger instance
 - Global exception filter: auto-catch unhandled HTTP exceptions, send 5xx through pipeline
 - Filter attaches: method, path, status code, IP as fields
+- Request context middleware: `AsyncLocalStorage` captures requestId, method, path
+- Auto-attaches request context to all alerts fired during the request lifecycle
+- requestId from `x-request-id` header or auto-generated UUID
 
 ### 4.2 NextJS integration (`@iqai/alert-logger/nextjs`)
 - `createAlertLoggerHandler(config)` — initialize in `instrumentation.ts` `register()`

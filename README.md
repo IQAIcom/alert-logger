@@ -14,6 +14,9 @@ Stop drowning in alert storms. `@iqai/alert-logger` groups repeated errors using
 - **Adapter architecture** — Discord and Console built-in; Sentry, Slack, Telegram as separate packages; or build your own
 - **NestJS integration** — drop-in `@Global()` module with automatic exception filter
 - **NextJS integration** — `instrumentation.ts` hook with `onRequestError` handler
+- **Per-environment config** — different suppression thresholds, levels, and ping rules for prod/staging/dev
+- **Environment badges** — `[PROD]`, `[STG]`, `[DEV]` prefix on every alert so you never confuse environments
+- **Request context (NestJS)** — auto-attaches request ID, method, path via `AsyncLocalStorage`
 - **Rate-limit aware** — respects per-adapter limits, queues on failure, drains on recovery
 - **Zero framework deps in core** — just `node:crypto` and `fetch`
 
@@ -142,6 +145,36 @@ When the same error fires repeatedly, the library doesn't spam your channel:
 
 Errors are grouped by **fingerprint** — the library strips variable parts (IDs, timestamps, UUIDs, hex addresses) from the error message and hashes it with the top stack frames. Same bug, different request = same group.
 
+## Per-Environment Config
+
+Same codebase, different behavior per environment. Dev won't bug you as much as prod:
+
+```ts
+AlertLogger.init({
+  adapters: [new DiscordAdapter({ webhookUrl: '...' })],
+  environment: process.env.NODE_ENV,
+  environments: {
+    production: {
+      levels: ['warning', 'critical'],
+      pings: { critical: ['@here'] },
+      aggregation: { digestIntervalMs: 5 * 60_000 },
+    },
+    staging: {
+      levels: ['critical'],           // only errors, no warnings
+      pings: {},                       // never ping anyone
+      aggregation: { digestIntervalMs: 15 * 60_000 },
+    },
+    development: {
+      levels: ['critical'],
+      pings: {},
+      aggregation: { rampThreshold: 8, digestIntervalMs: 30 * 60_000 },
+    },
+  },
+})
+```
+
+Every alert is prefixed with an environment badge (`[PROD]`, `[STG]`, `[DEV]`) so you never mistake staging for production.
+
 ## Multi-Channel Routing
 
 Route alerts to different webhooks by severity or tags:
@@ -210,6 +243,13 @@ AlertLogger.init({
     channels: {},                  // level → webhook URL
     tags: {},                      // tag → webhook URL
     pings: {},                     // level → mention strings
+  },
+
+  // Per-environment overrides
+  environments: {
+    production: { levels: ['warning', 'critical'], pings: { critical: ['@here'] } },
+    staging: { levels: ['critical'], pings: {} },
+    development: { levels: ['critical'], aggregation: { rampThreshold: 8 } },
   },
 
   // Reliability

@@ -219,6 +219,62 @@ routing: {
 
 Routing cascade: tag match → level match → default adapter webhook.
 
+## Environment Configuration
+
+Per-environment overrides so the same codebase behaves differently without changing application code. Dev errors suppress aggressively, staging never pings, prod pings on critical.
+
+```ts
+environments: {
+  production: {
+    levels: ['warning', 'critical'],
+    pings: { critical: ['@here'] },
+    aggregation: { digestIntervalMs: 5 * 60_000 },
+  },
+  staging: {
+    levels: ['critical'],
+    pings: {},
+    aggregation: { digestIntervalMs: 15 * 60_000 },
+  },
+  development: {
+    levels: ['critical'],
+    pings: {},
+    aggregation: { rampThreshold: 8, digestIntervalMs: 30 * 60_000 },
+  },
+}
+```
+
+The active environment is set via `environment` in root config (typically from `process.env.NODE_ENV`). Environment-specific values are shallow-merged over root config at init time — no runtime branching.
+
+### Environment Badges
+
+Every embed is prefixed with a visual environment badge so alerts are immediately scannable:
+
+- Production: `[PROD]` (no prefix color change — default severity colors)
+- Staging: `[STG]`
+- Development: `[DEV]`
+
+The badge appears in the embed title: `[PROD] [CRITICAL] Trade Settlement Failed`. This prevents the "is this real or staging?" confusion that hits small teams sharing channels.
+
+## Request Context (NestJS)
+
+In NestJS, the module registers an `AsyncLocalStorage`-backed middleware. For every incoming HTTP request, it captures:
+
+- `requestId` (from `x-request-id` header or auto-generated UUID)
+- `method` (GET, POST, etc.)
+- `path` (`/api/markets/123`)
+
+Any `alert.error()` call during that request lifecycle automatically gets these fields attached — no manual passing required.
+
+```ts
+// Developer writes:
+this.alert.error('Payment failed', error, { fields: { orderId: '123' } })
+
+// Alert automatically includes:
+// fields: { orderId: '123', requestId: 'abc-def', method: 'POST', path: '/api/checkout' }
+```
+
+This uses `AsyncLocalStorage` from `node:async_hooks` which has negligible performance overhead in modern Node.js. The context is opt-in: if the middleware isn't registered (e.g. standalone usage, cron jobs), alerts work normally without request fields.
+
 ## Reliability
 
 **Retry queue:** Failed sends go into an in-memory ring buffer (default 500). Drains when adapter reports healthy. Optional disk persistence via configurable path.
@@ -322,6 +378,25 @@ AlertLogger.init({
     channels: { critical: '...' },
     tags: { indexer: '...' },
     pings: { critical: ['@here'] },
+  },
+
+  // Per-environment overrides
+  environments: {
+    production: {
+      levels: ['warning', 'critical'],
+      pings: { critical: ['@here'] },
+      aggregation: { digestIntervalMs: 5 * 60_000 },
+    },
+    staging: {
+      levels: ['critical'],
+      pings: {},
+      aggregation: { digestIntervalMs: 15 * 60_000 },
+    },
+    development: {
+      levels: ['critical'],
+      pings: {},
+      aggregation: { rampThreshold: 8, digestIntervalMs: 30 * 60_000 },
+    },
   },
 
   // Reliability
