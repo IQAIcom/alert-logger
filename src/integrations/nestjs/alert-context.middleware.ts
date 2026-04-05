@@ -15,8 +15,10 @@ export const requestStore = new AsyncLocalStorage<RequestContext>()
 export class AlertContextMiddleware implements NestMiddleware {
   use(req: Request, _res: Response, next: NextFunction): void {
     const context: RequestContext = {
-      requestId:
-        (req.headers['x-request-id'] as string | undefined) ?? randomUUID(),
+      requestId: (() => {
+        const rawId = req.headers['x-request-id']
+        return (Array.isArray(rawId) ? rawId[0] : rawId) ?? randomUUID()
+      })(),
       method: req.method,
       path: req.originalUrl ?? req.url,
     }
