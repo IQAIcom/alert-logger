@@ -1,7 +1,7 @@
-import { Catch, HttpException } from '@nestjs/common'
-import { BaseExceptionFilter, HttpAdapterHost } from '@nestjs/core'
 import type { ArgumentsHost } from '@nestjs/common'
-import { AlertLoggerService } from './alert-logger.service.js'
+import { Catch, HttpException } from '@nestjs/common'
+import { BaseExceptionFilter, type HttpAdapterHost } from '@nestjs/core'
+import type { AlertLoggerService } from './alert-logger.service.js'
 
 @Catch()
 export class AlertExceptionFilter extends BaseExceptionFilter {
@@ -33,8 +33,7 @@ export class AlertExceptionFilter extends BaseExceptionFilter {
         })
       }
     } else {
-      const error =
-        exception instanceof Error ? exception : new Error(String(exception))
+      const error = exception instanceof Error ? exception : new Error(String(exception))
 
       this.alert.critical(error.message, error, {
         fields: { method, path, statusCode: 500, ip },

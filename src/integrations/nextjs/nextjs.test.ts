@@ -1,8 +1,8 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AlertLogger } from '../../core/alert-logger.js'
-import { createAlertLoggerHandler, captureRequestError } from './handler.js'
-import { getAlertLogger } from './index.js'
 import type { AlertAdapter } from '../../core/types.js'
+import { captureRequestError, createAlertLoggerHandler } from './handler.js'
+import { getAlertLogger } from './index.js'
 
 const mockAdapter: AlertAdapter = {
   name: 'mock',
@@ -46,20 +46,16 @@ describe('captureRequestError', () => {
     captureRequestError(error, request, context)
 
     expect(errorSpy).toHaveBeenCalledOnce()
-    expect(errorSpy).toHaveBeenCalledWith(
-      '[Next.js] App/route error',
-      error,
-      {
-        fields: {
-          path: '/api/users',
-          method: 'GET',
-          routerKind: 'App',
-          routeType: 'route',
-          renderSource: 'react-server-components',
-        },
-        tags: ['nextjs'],
+    expect(errorSpy).toHaveBeenCalledWith('[Next.js] App/route error', error, {
+      fields: {
+        path: '/api/users',
+        method: 'GET',
+        routerKind: 'App',
+        routeType: 'route',
+        renderSource: 'react-server-components',
       },
-    )
+      tags: ['nextjs'],
+    })
   })
 
   it('handles missing logger gracefully (no throw)', () => {

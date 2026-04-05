@@ -1,15 +1,19 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { HealthManager, formatDuration } from './health-manager.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { formatDuration, HealthManager } from './health-manager.js'
 import type { AlertAdapter, AlertLevel, FormattedAlert } from './types.js'
 
-function createMockAdapter(options?: { failCount?: number }): AlertAdapter & { sent: FormattedAlert[]; callCount: number } {
+function createMockAdapter(options?: {
+  failCount?: number
+}): AlertAdapter & { sent: FormattedAlert[]; callCount: number } {
   let callCount = 0
   const failCount = options?.failCount ?? 0
   return {
     name: 'mock',
     levels: ['info', 'warning', 'critical'] as AlertLevel[],
     sent: [] as FormattedAlert[],
-    get callCount() { return callCount },
+    get callCount() {
+      return callCount
+    },
     rateLimits: () => ({ maxPerWindow: 100, windowMs: 60_000 }),
     async send(alert: FormattedAlert) {
       callCount++

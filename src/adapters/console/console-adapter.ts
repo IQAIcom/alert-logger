@@ -1,4 +1,4 @@
-import type { AlertAdapter, FormattedAlert, AlertLevel } from '../../core/types.js'
+import type { AlertAdapter, AlertLevel, FormattedAlert } from '../../core/types.js'
 
 export interface ConsoleAdapterOptions {
   pretty?: boolean
@@ -29,11 +29,9 @@ export class ConsoleAdapter implements AlertAdapter {
   }
 
   async send(alert: FormattedAlert): Promise<void> {
-    const output = this.pretty
-      ? this.formatPretty(alert)
-      : this.formatJson(alert)
+    const output = this.pretty ? this.formatPretty(alert) : this.formatJson(alert)
 
-    process.stdout.write(output + '\n')
+    process.stdout.write(`${output}\n`)
   }
 
   private formatPretty(alert: FormattedAlert): string {

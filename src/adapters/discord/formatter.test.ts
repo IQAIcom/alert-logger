@@ -189,7 +189,7 @@ describe('formatDiscordEmbed', () => {
       const alert = makeAlert({ message: 'B'.repeat(2500) })
       const embed = formatDiscordEmbed(alert)
 
-      expect(embed.description!.length).toBeLessThanOrEqual(2000)
+      expect(embed.description?.length).toBeLessThanOrEqual(2000)
     })
   })
 

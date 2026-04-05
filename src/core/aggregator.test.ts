@@ -1,6 +1,6 @@
 import { Aggregator } from './aggregator.js'
-import { DEFAULT_AGGREGATION } from './types.js'
 import type { AggregationConfig } from './types.js'
+import { DEFAULT_AGGREGATION } from './types.js'
 
 describe('Aggregator', () => {
   let aggregator: Aggregator
@@ -76,7 +76,7 @@ describe('Aggregator', () => {
 
   describe('sustained phase', () => {
     function processNTimes(fp: string, n: number) {
-      let lastResult
+      let lastResult: ReturnType<typeof aggregator.process> | undefined
       for (let i = 0; i < n; i++) {
         lastResult = aggregator.process(fp)
       }
@@ -266,9 +266,7 @@ describe('Aggregator', () => {
       // Advance past cooldown + the 30s check interval
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 30_000 + 1)
 
-      expect(onResolved).toHaveBeenCalledWith(
-        expect.objectContaining({ fingerprint: 'err-timer' }),
-      )
+      expect(onResolved).toHaveBeenCalledWith(expect.objectContaining({ fingerprint: 'err-timer' }))
     })
 
     it('does not start multiple timers', () => {

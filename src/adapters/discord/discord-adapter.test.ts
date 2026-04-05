@@ -1,6 +1,6 @@
-import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest'
-import { DiscordAdapter } from './discord-adapter.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FormattedAlert } from '../../core/types.js'
+import { DiscordAdapter } from './discord-adapter.js'
 
 function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
   return {
@@ -91,9 +91,7 @@ describe('DiscordAdapter', () => {
     })
     const okResponse = new Response(null, { status: 200 })
 
-    mockFetch
-      .mockResolvedValueOnce(rateLimitResponse)
-      .mockResolvedValueOnce(okResponse)
+    mockFetch.mockResolvedValueOnce(rateLimitResponse).mockResolvedValueOnce(okResponse)
 
     const alert = makeAlert()
     const sendPromise = adapter.send(alert)
@@ -105,14 +103,10 @@ describe('DiscordAdapter', () => {
   })
 
   it('send() throws on non-429 error responses', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response('Forbidden', { status: 403 }),
-    )
+    mockFetch.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }))
 
     const alert = makeAlert()
-    await expect(adapter.send(alert)).rejects.toThrow(
-      'Discord webhook returned 403',
-    )
+    await expect(adapter.send(alert)).rejects.toThrow('Discord webhook returned 403')
   })
 
   it('rateLimits() returns 30/60s', () => {

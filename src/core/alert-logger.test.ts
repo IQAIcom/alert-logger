@@ -5,8 +5,12 @@ class MockAdapter implements AlertAdapter {
   readonly name = 'mock'
   levels: AlertLevel[] = ['info', 'warning', 'critical']
   sent: FormattedAlert[] = []
-  rateLimits() { return { maxPerWindow: 100, windowMs: 60_000 } }
-  async send(alert: FormattedAlert) { this.sent.push(alert) }
+  rateLimits() {
+    return { maxPerWindow: 100, windowMs: 60_000 }
+  }
+  async send(alert: FormattedAlert) {
+    this.sent.push(alert)
+  }
 }
 
 afterEach(() => {
@@ -148,9 +152,7 @@ describe('AlertLogger integration', () => {
     })
 
     it('getInstance() throws before init()', () => {
-      expect(() => AlertLogger.getInstance()).toThrow(
-        'AlertLogger not initialized',
-      )
+      expect(() => AlertLogger.getInstance()).toThrow('AlertLogger not initialized')
     })
   })
 })

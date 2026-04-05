@@ -1,6 +1,6 @@
 import { fingerprint } from './fingerprinter.js'
-import { DEFAULT_FINGERPRINT } from './types.js'
 import type { FingerprintConfig } from './types.js'
+import { DEFAULT_FINGERPRINT } from './types.js'
 
 const cfg = DEFAULT_FINGERPRINT
 
@@ -188,14 +188,8 @@ describe('fingerprint', () => {
     })
 
     it('includes file, line, and column in stack key', () => {
-      const stackA = [
-        'Error: test',
-        '    at fn (/app/src/index.ts:10:5)',
-      ].join('\n')
-      const stackB = [
-        'Error: test',
-        '    at fn (/app/src/index.ts:10:99)',
-      ].join('\n')
+      const stackA = ['Error: test', '    at fn (/app/src/index.ts:10:5)'].join('\n')
+      const stackB = ['Error: test', '    at fn (/app/src/index.ts:10:99)'].join('\n')
 
       const a = fingerprint('E', 'test', makeErrorWithStack(stackA), cfg)
       const b = fingerprint('E', 'test', makeErrorWithStack(stackB), cfg)

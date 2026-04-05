@@ -1,4 +1,4 @@
-import { writeFile, rename, readFile } from 'node:fs/promises'
+import { readFile, rename, writeFile } from 'node:fs/promises'
 import type { QueueEntry } from './retry-queue.js'
 
 interface SerializedQueues {
@@ -19,9 +19,7 @@ export async function saveQueuesToDisk(
   await rename(tmp, path)
 }
 
-export async function loadQueuesFromDisk(
-  path: string,
-): Promise<Map<string, QueueEntry[]>> {
+export async function loadQueuesFromDisk(path: string): Promise<Map<string, QueueEntry[]>> {
   let raw: string
   try {
     raw = await readFile(path, 'utf-8')
@@ -40,7 +38,9 @@ export async function loadQueuesFromDisk(
     }
     return map
   } catch {
-    console.warn(`[alert-logger] Failed to parse queue persistence file at ${path}, starting with empty queues`)
+    console.warn(
+      `[alert-logger] Failed to parse queue persistence file at ${path}, starting with empty queues`,
+    )
     return new Map()
   }
 }

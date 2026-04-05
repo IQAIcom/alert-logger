@@ -1,4 +1,4 @@
-import { RetryQueue, type QueueEntry } from './retry-queue.js'
+import { type QueueEntry, RetryQueue } from './retry-queue.js'
 import type { FormattedAlert } from './types.js'
 
 function makeEntry(id: number): QueueEntry {
@@ -196,11 +196,7 @@ describe('RetryQueue', () => {
       queue.enqueue(makeEntry(4)) // wraps around
 
       const json = queue.toJSON()
-      expect(json.map(e => e.alert.title)).toEqual([
-        'Alert 2',
-        'Alert 3',
-        'Alert 4',
-      ])
+      expect(json.map((e) => e.alert.title)).toEqual(['Alert 2', 'Alert 3', 'Alert 4'])
     })
   })
 

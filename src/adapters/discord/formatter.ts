@@ -18,7 +18,7 @@ const SEVERITY_COLORS: Record<string, number> = {
 const RESOLUTION_COLOR = 0x2ecc71
 
 function truncate(text: string, max: number): string {
-  return text.length > max ? text.slice(0, max - 1) + '\u2026' : text
+  return text.length > max ? `${text.slice(0, max - 1)}\u2026` : text
 }
 
 /**
@@ -57,10 +57,7 @@ export function formatDiscordEmbed(alert: FormattedAlert): DiscordEmbed {
 
   switch (phase) {
     case 'onset': {
-      const title = truncate(
-        `${badge} [${alert.level.toUpperCase()}] ${safeTitle}`,
-        256,
-      )
+      const title = truncate(`${badge} [${alert.level.toUpperCase()}] ${safeTitle}`, 256)
 
       let description = safeMessage
       if (alert.error?.stack) {
@@ -68,8 +65,7 @@ export function formatDiscordEmbed(alert: FormattedAlert): DiscordEmbed {
       }
       description = truncate(description, 2000)
 
-      const fields: Array<{ name: string; value: string; inline?: boolean }> =
-        []
+      const fields: Array<{ name: string; value: string; inline?: boolean }> = []
       if (alert.options.fields) {
         for (const [key, value] of Object.entries(alert.options.fields)) {
           fields.push({
@@ -121,9 +117,7 @@ export function formatDiscordEmbed(alert: FormattedAlert): DiscordEmbed {
     }
 
     case 'resolution': {
-      const totalDuration = formatDuration(
-        aggregation.lastSeen - aggregation.firstSeen,
-      )
+      const totalDuration = formatDuration(aggregation.lastSeen - aggregation.firstSeen)
       const title = truncate(
         `\u2705 Resolved: ${safeTitle} \u2014 ${aggregation.count} total over ${totalDuration}`,
         256,

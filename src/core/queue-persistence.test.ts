@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-import { access, writeFile, rm } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
-import { saveQueuesToDisk, loadQueuesFromDisk } from './queue-persistence.js'
+import { access, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { loadQueuesFromDisk, saveQueuesToDisk } from './queue-persistence.js'
 import type { QueueEntry } from './retry-queue.js'
 import type { FormattedAlert } from './types.js'
 
@@ -85,10 +85,10 @@ describe('queue-persistence', () => {
 
       expect(loaded.size).toBe(2)
       expect(loaded.get('discord')).toHaveLength(1)
-      expect(loaded.get('discord')![0].retryCount).toBe(2)
+      expect(loaded.get('discord')?.[0].retryCount).toBe(2)
       expect(loaded.get('slack')).toHaveLength(1)
-      expect(loaded.get('slack')![0].retryCount).toBe(5)
-      expect(loaded.get('slack')![0].alert.title).toBe('Test alert')
+      expect(loaded.get('slack')?.[0].retryCount).toBe(5)
+      expect(loaded.get('slack')?.[0].alert.title).toBe('Test alert')
     })
 
     it('returns empty Map when file does not exist', async () => {

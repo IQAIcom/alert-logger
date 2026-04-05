@@ -1,22 +1,22 @@
 import {
-  Global,
-  Module,
   type DynamicModule,
+  Global,
   type MiddlewareConsumer,
+  Module,
   type NestModule,
   type Provider,
 } from '@nestjs/common'
 import { APP_FILTER } from '@nestjs/core'
 import { AlertLogger } from '../../core/alert-logger.js'
-import {
-  ALERT_LOGGER_OPTIONS,
-  ALERT_LOGGER_INSTANCE,
-  type AlertLoggerModuleOptions,
-  type AlertLoggerAsyncOptions,
-} from './types.js'
 import { AlertContextMiddleware } from './alert-context.middleware.js'
 import { AlertLoggerService } from './alert-logger.service.js'
 import { AlertExceptionFilter } from './exception.filter.js'
+import {
+  ALERT_LOGGER_INSTANCE,
+  ALERT_LOGGER_OPTIONS,
+  type AlertLoggerAsyncOptions,
+  type AlertLoggerModuleOptions,
+} from './types.js'
 
 @Global()
 @Module({})

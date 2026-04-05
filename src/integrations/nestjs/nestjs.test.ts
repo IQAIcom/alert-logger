@@ -1,8 +1,5 @@
+import { AlertContextMiddleware, requestStore } from './alert-context.middleware.js'
 import { AlertLoggerService } from './alert-logger.service.js'
-import {
-  AlertContextMiddleware,
-  requestStore,
-} from './alert-context.middleware.js'
 
 // ---------------------------------------------------------------------------
 // AlertLoggerService
@@ -123,7 +120,7 @@ describe('AlertContextMiddleware', () => {
     middleware.use(req as any, {} as any, () => {
       const ctx = requestStore.getStore()
       expect(ctx).toBeDefined()
-      expect(ctx!.requestId).toBe('header-id-42')
+      expect(ctx?.requestId).toBe('header-id-42')
     })
   })
 
@@ -138,7 +135,7 @@ describe('AlertContextMiddleware', () => {
       const ctx = requestStore.getStore()
       expect(ctx).toBeDefined()
       // UUID v4 format: 8-4-4-4-12 hex chars
-      expect(ctx!.requestId).toMatch(
+      expect(ctx?.requestId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       )
     })
@@ -154,8 +151,8 @@ describe('AlertContextMiddleware', () => {
     middleware.use(req as any, {} as any, () => {
       const ctx = requestStore.getStore()
       expect(ctx).toBeDefined()
-      expect(ctx!.method).toBe('DELETE')
-      expect(ctx!.path).toBe('/api/items/5')
+      expect(ctx?.method).toBe('DELETE')
+      expect(ctx?.path).toBe('/api/items/5')
     })
   })
 })

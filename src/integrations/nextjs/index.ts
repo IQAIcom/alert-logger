@@ -1,5 +1,5 @@
-export { createAlertLoggerHandler, captureRequestError } from './handler.js'
 export type { AlertLoggerConfig } from '../../core/types.js'
+export { captureRequestError, createAlertLoggerHandler } from './handler.js'
 
 import { AlertLogger } from '../../core/alert-logger.js'
 

@@ -9,9 +9,7 @@ export interface AlertLoggerModuleOptions extends AlertLoggerConfig {
 
 export interface AlertLoggerAsyncOptions {
   exceptions?: { autoRegister?: boolean }
-  useFactory: (
-    ...args: any[]
-  ) => AlertLoggerModuleOptions | Promise<AlertLoggerModuleOptions>
+  useFactory: (...args: any[]) => AlertLoggerModuleOptions | Promise<AlertLoggerModuleOptions>
   inject?: any[]
   imports?: any[]
 }

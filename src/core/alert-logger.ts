@@ -1,14 +1,14 @@
-import { fingerprint } from './fingerprinter.js'
 import { Aggregator, type ResolvedEntry } from './aggregator.js'
+import { fingerprint } from './fingerprinter.js'
+import { formatDuration, HealthManager } from './health-manager.js'
 import { Router } from './router.js'
-import { HealthManager, formatDuration } from './health-manager.js'
 import type {
+  AlertAdapter,
   AlertLevel,
   AlertLoggerConfig,
   AlertOptions,
   FormattedAlert,
   ResolvedConfig,
-  AlertAdapter,
 } from './types.js'
 import { resolveConfig } from './types.js'
 
@@ -59,9 +59,7 @@ export class AlertLogger {
 
   static getInstance(): AlertLogger {
     if (!AlertLogger.instance) {
-      throw new Error(
-        'AlertLogger not initialized. Call AlertLogger.init() first.',
-      )
+      throw new Error('AlertLogger not initialized. Call AlertLogger.init() first.')
     }
     return AlertLogger.instance
   }
@@ -89,11 +87,7 @@ export class AlertLogger {
     this.log('critical', title, message, err, opts)
   }
 
-  critical(
-    title: string,
-    error?: Error | string,
-    options?: AlertOptions,
-  ): void {
+  critical(title: string, error?: Error | string, options?: AlertOptions): void {
     const [err, opts] = this.normalizeErrorArgs(error, options)
     const message = err?.message ?? title
     this.log('critical', title, message, err, opts)
@@ -115,13 +109,7 @@ export class AlertLogger {
     if (!this.config.levels.includes(level)) return
 
     const opts: AlertOptions = options ?? {}
-    const fp = fingerprint(
-      title,
-      message,
-      error,
-      this.config.fingerprint,
-      opts.dedupKey,
-    )
+    const fp = fingerprint(title, message, error, this.config.fingerprint, opts.dedupKey)
 
     // Store metadata for resolution messages
     if (!this.alertMeta.has(fp)) {

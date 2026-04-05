@@ -1,7 +1,7 @@
-import type { AlertAdapter, FormattedAlert } from './types.js'
-import { RetryQueue } from './retry-queue.js'
+import { loadQueuesFromDisk, saveQueuesToDisk } from './queue-persistence.js'
 import type { QueueEntry } from './retry-queue.js'
-import { saveQueuesToDisk, loadQueuesFromDisk } from './queue-persistence.js'
+import { RetryQueue } from './retry-queue.js'
+import type { AlertAdapter, FormattedAlert } from './types.js'
 
 interface AdapterHealth {
   consecutiveFailures: number
@@ -64,28 +64,35 @@ export class HealthManager {
     const formatted = adapter.formatAlert ? adapter.formatAlert(alert) : alert
 
     if (this.isHealthy(adapter) && health.queue.isEmpty) {
-      adapter.send(formatted).then(
-        () => {
-          health.consecutiveFailures = 0
-          health.lastSuccessAt = Date.now()
-        },
-        () => {
-          health.consecutiveFailures++
-          health.queue.enqueue({ alert: formatted, enqueuedAt: Date.now(), retryCount: 0 })
+      adapter
+        .send(formatted)
+        .then(
+          () => {
+            health.consecutiveFailures = 0
+            health.lastSuccessAt = Date.now()
+          },
+          () => {
+            health.consecutiveFailures++
+            health.queue.enqueue({ alert: formatted, enqueuedAt: Date.now(), retryCount: 0 })
 
-          if (!this.isHealthy(adapter)) {
-            if (health.warnedAt === null) {
-              console.warn(`[alert-logger] ${adapter.name} adapter is unhealthy (${health.consecutiveFailures} consecutive failures)`)
-              health.warnedAt = Date.now()
+            if (!this.isHealthy(adapter)) {
+              if (health.warnedAt === null) {
+                console.warn(
+                  `[alert-logger] ${adapter.name} adapter is unhealthy (${health.consecutiveFailures} consecutive failures)`,
+                )
+                health.warnedAt = Date.now()
+              }
             }
-          }
 
-          this.ensureDrainTimer(adapter)
-        },
-      ).catch(() => {})
+            this.ensureDrainTimer(adapter)
+          },
+        )
+        .catch(() => {})
     } else {
       if (!this.isHealthy(adapter) && health.warnedAt === null) {
-        console.warn(`[alert-logger] ${adapter.name} adapter is unhealthy (${health.consecutiveFailures} consecutive failures)`)
+        console.warn(
+          `[alert-logger] ${adapter.name} adapter is unhealthy (${health.consecutiveFailures} consecutive failures)`,
+        )
         health.warnedAt = Date.now()
       }
       health.queue.enqueue({ alert: formatted, enqueuedAt: Date.now(), retryCount: 0 })

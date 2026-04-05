@@ -4,28 +4,19 @@ export class Router {
   private routing: RoutingConfig
   private pings: Partial<Record<AlertLevel, string[]>>
 
-  constructor(
-    routing: RoutingConfig,
-    pings: Partial<Record<AlertLevel, string[]>>,
-  ) {
+  constructor(routing: RoutingConfig, pings: Partial<Record<AlertLevel, string[]>>) {
     this.routing = routing
     this.pings = pings
   }
 
-  route(
-    level: AlertLevel,
-    tags?: string[],
-  ): { webhookUrl?: string; pings: string[] } {
+  route(level: AlertLevel, tags?: string[]): { webhookUrl?: string; pings: string[] } {
     const webhookUrl = this.resolveWebhookUrl(level, tags)
     const pings = this.pings[level] ?? []
 
     return webhookUrl ? { webhookUrl, pings } : { pings }
   }
 
-  private resolveWebhookUrl(
-    level: AlertLevel,
-    tags?: string[],
-  ): string | undefined {
+  private resolveWebhookUrl(level: AlertLevel, tags?: string[]): string | undefined {
     // 1. Tag match
     if (tags?.length && this.routing.tags) {
       for (const tag of tags) {
