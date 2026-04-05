@@ -83,9 +83,11 @@ describe('DiscordAdapter', () => {
   })
 
   it('send() retries on 429 with Retry-After header', async () => {
+    vi.useFakeTimers()
+
     const rateLimitResponse = new Response(null, {
       status: 429,
-      headers: { 'Retry-After': '0' },
+      headers: { 'Retry-After': '1' },
     })
     const okResponse = new Response(null, { status: 200 })
 
@@ -94,9 +96,12 @@ describe('DiscordAdapter', () => {
       .mockResolvedValueOnce(okResponse)
 
     const alert = makeAlert()
-    await adapter.send(alert)
+    const sendPromise = adapter.send(alert)
+    await vi.runAllTimersAsync()
+    await sendPromise
 
     expect(mockFetch).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
   })
 
   it('send() throws on non-429 error responses', async () => {
