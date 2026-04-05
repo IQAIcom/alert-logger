@@ -1,6 +1,7 @@
 import { fingerprint } from './fingerprinter.js'
 import { Aggregator, type ResolvedEntry } from './aggregator.js'
 import { Router } from './router.js'
+import { HealthManager, formatDuration } from './health-manager.js'
 import type {
   AlertLevel,
   AlertLoggerConfig,
@@ -24,6 +25,7 @@ export class AlertLogger {
   private readonly aggregator: Aggregator
   private readonly router: Router
   private readonly adapters: AlertAdapter[]
+  private readonly healthManager: HealthManager
   /** Track original alert metadata per fingerprint for resolution messages */
   private readonly alertMeta = new Map<string, AlertMeta>()
 
@@ -32,6 +34,16 @@ export class AlertLogger {
     this.aggregator = new Aggregator(config.aggregation)
     this.router = new Router(config.routing, config.pings)
     this.adapters = config.adapters
+    this.healthManager = new HealthManager({
+      maxQueueSize: config.queue.maxSize,
+      persistPath: config.queue.persistPath,
+      onRecovery: (adapterName, queuedCount, downtimeMs) => {
+        this.handleAdapterRecovery(adapterName, queuedCount, downtimeMs)
+      },
+    })
+
+    // Load persisted queues from disk (best-effort, non-blocking)
+    void this.healthManager.load()
 
     this.aggregator.startResolutionTimer((entry) => {
       this.handleResolution(entry)
@@ -57,7 +69,8 @@ export class AlertLogger {
   /** Reset the singleton — primarily for testing. */
   static reset(): void {
     if (AlertLogger.instance) {
-      AlertLogger.instance.destroy()
+      // Fire-and-forget: destroy is async but reset is used in tests
+      void AlertLogger.instance.destroy()
       AlertLogger.instance = null
     }
   }
@@ -86,8 +99,9 @@ export class AlertLogger {
     this.log('critical', title, message, err, opts)
   }
 
-  destroy(): void {
+  async destroy(): Promise<void> {
     this.aggregator.destroy()
+    await this.healthManager.destroy()
   }
 
   private log(
@@ -173,21 +187,52 @@ export class AlertLogger {
     this.sendToAdapters(formatted)
   }
 
+  private handleAdapterRecovery(
+    adapterName: string,
+    queuedCount: number,
+    downtimeMs: number,
+  ): void {
+    const durationStr = formatDuration(downtimeMs)
+    const recovery: FormattedAlert = {
+      level: 'info',
+      title: `${adapterName} adapter recovered`,
+      message: `${queuedCount} alerts queued during ${durationStr} of downtime`,
+      options: {
+        fields: {
+          queuedAlerts: String(queuedCount),
+          downtime: durationStr,
+        },
+      },
+      timestamp: Date.now(),
+      serviceName: this.config.serviceName,
+      environment: this.config.environment,
+      aggregation: {
+        phase: 'resolution',
+        fingerprint: `health-recovery-${adapterName}`,
+        count: 1,
+        suppressedSince: 0,
+        firstSeen: Date.now(),
+        lastSeen: Date.now(),
+        peakRate: 0,
+      },
+      pings: [],
+      environmentBadge: this.config.environmentBadge,
+    }
+
+    // Send recovery notification to the recovered adapter
+    const adapter = this.adapters.find((a) => a.name === adapterName)
+    if (adapter) {
+      adapter.send(recovery).catch(() => {})
+    }
+  }
+
   private sendToAdapters(alert: FormattedAlert): void {
     for (const adapter of this.adapters) {
       if (!adapter.levels.includes(alert.level) && alert.aggregation.phase !== 'resolution') {
         continue
       }
 
-      const formatted = adapter.formatAlert ? adapter.formatAlert(alert) : alert
-
-      adapter.send(formatted).catch((err) => {
-        // Fallback: log to console if adapter fails
-        console.error(
-          `[alert-logger] ${adapter.name} adapter failed:`,
-          err instanceof Error ? err.message : err,
-        )
-      })
+      this.healthManager.dispatch(adapter, alert)
     }
   }
 
