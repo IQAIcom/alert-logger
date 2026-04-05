@@ -13,7 +13,7 @@ Stop drowning in alert storms. `@iqai/alert-logger` groups repeated errors using
 - **Multi-channel routing** — route by severity level or custom tags to different channels
 - **Adapter architecture** — Discord and Console built-in; Sentry, Slack, Telegram as separate packages; or build your own
 - **NestJS integration** — drop-in `@Global()` module with automatic exception filter
-- **NextJS integration** — `instrumentation.ts` hook with `onRequestError` handler
+- **NextJS integration** — `instrumentation.ts` hook with automatic `onRequestError` handler
 - **Per-environment config** — different suppression thresholds, levels, and ping rules for prod/staging/dev
 - **Environment badges** — `[PROD]`, `[STG]`, `[DEV]` prefix on every alert so you never confuse environments
 - **Request context (NestJS)** — auto-attaches request ID, method, path via `AsyncLocalStorage`
