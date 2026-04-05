@@ -4,6 +4,19 @@
   "description": "Smart alert aggregation for any destination — Discord, Sentry, Slack, console, or your own adapter",
   "type": "module",
   "license": "MIT",
+  "author": "IQ AI <https://github.com/IQAIcom>",
+  "keywords": [
+    "alert",
+    "logger",
+    "discord",
+    "webhook",
+    "error-tracking",
+    "aggregation",
+    "deduplication",
+    "nestjs",
+    "nextjs",
+    "monitoring"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/IQAIcom/alert-logger"
