@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- [`c31f9b9`](https://github.com/IQAIcom/alert-logger/commit/c31f9b99ed5b35fc3def62370a89875b924627df) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Initial release of @iqai/alert-logger with core engine, Discord/Console adapters, reliability layer, and NestJS/Next.js integrations.
+
 ## 0.1.0
 
 Initial release.
