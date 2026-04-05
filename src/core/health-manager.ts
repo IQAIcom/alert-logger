@@ -63,7 +63,7 @@ export class HealthManager {
     const health = this.getOrCreateHealth(adapter)
     const formatted = adapter.formatAlert ? adapter.formatAlert(alert) : alert
 
-    if (this.isHealthy(adapter)) {
+    if (this.isHealthy(adapter) && health.queue.isEmpty) {
       adapter.send(formatted).then(
         () => {
           health.consecutiveFailures = 0
@@ -82,10 +82,9 @@ export class HealthManager {
 
           this.ensureDrainTimer(adapter)
         },
-      )
+      ).catch(() => {})
     } else {
-      // Adapter is unhealthy — queue instead of sending
-      if (health.warnedAt === null) {
+      if (!this.isHealthy(adapter) && health.warnedAt === null) {
         console.warn(`[alert-logger] ${adapter.name} adapter is unhealthy (${health.consecutiveFailures} consecutive failures)`)
         health.warnedAt = Date.now()
       }
@@ -148,10 +147,13 @@ export class HealthManager {
           this.config.onRecovery(adapter.name, queuedCount, downtimeMs)
         }
 
-        // Let the drain timer continue flushing remaining items naturally
-        // rather than blasting them all at once (safer for rate limits)
+        // Schedule an immediate re-drain to flush backlog faster on recovery
+        if (!health.queue.isEmpty) {
+          setTimeout(() => void this.drainOnce(adapter), 100)
+        }
       } catch {
-        // Send failed
+        // Send failed — track consecutive failures for health status
+        health.consecutiveFailures++
         entry.retryCount++
         if (entry.retryCount >= 3) {
           health.queue.dequeue()

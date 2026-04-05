@@ -66,7 +66,24 @@ describe('HealthManager', () => {
     expect(adapter.sent).toHaveLength(1)
     expect(adapter.sent[0]).toEqual(alert)
 
-    hm.destroy()
+    await hm.destroy()
+  })
+
+  it('FIFO: new alerts enqueue when queue is non-empty even if healthy', async () => {
+    const adapter = createMockAdapter({ failCount: 1 })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+
+    // First dispatch: healthy + empty queue -> sends directly, fails
+    hm.dispatch(adapter, createAlert({ title: 'first' }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(adapter.callCount).toBe(1)
+
+    // Second dispatch: healthy but queue non-empty -> enqueues (FIFO preserved)
+    hm.dispatch(adapter, createAlert({ title: 'second' }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(adapter.callCount).toBe(1) // NOT sent directly
+
+    await hm.destroy()
   })
 
   it('failed send: increments consecutiveFailures and enqueues', async () => {
@@ -82,36 +99,44 @@ describe('HealthManager', () => {
     // Adapter should not be healthy yet (only 1 failure, need 3)
     expect(hm.isHealthy(adapter)).toBe(true)
 
-    hm.destroy()
+    await hm.destroy()
   })
 
   it('unhealthy after 3 failures + 30s: enqueues without calling send', async () => {
     const adapter = createMockAdapter({ failCount: 100 })
     const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
 
-    // Set time so lastSuccessAt will be >30s ago after failures
-    const startTime = Date.now()
+    // First dispatch sends directly (queue empty + healthy), fails and enqueues
+    hm.dispatch(adapter, createAlert({ title: 'alert-0' }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(adapter.callCount).toBe(1) // sent directly, but failed
 
-    // Dispatch 3 alerts that all fail
-    for (let i = 0; i < 3; i++) {
-      hm.dispatch(adapter, createAlert({ title: `alert-${i}` }))
-      await vi.advanceTimersByTimeAsync(0)
-    }
+    // Subsequent dispatches go to queue (FIFO: queue is non-empty)
+    hm.dispatch(adapter, createAlert({ title: 'alert-1' }))
+    hm.dispatch(adapter, createAlert({ title: 'alert-2' }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(adapter.callCount).toBe(1) // no new sends, queued directly
 
-    // Advance time past 30s threshold
+    // Drain timer retries fail, incrementing consecutiveFailures
+    // After first dispatch failure: consecutiveFailures = 1
+    // After drain retry failures: consecutiveFailures = 2, 3
+    await vi.advanceTimersByTimeAsync(10_000) // drain retry #1 fails
+    await vi.advanceTimersByTimeAsync(10_000) // drain retry #2 fails
+
+    // Advance time past 30s threshold from last success
     vi.advanceTimersByTime(31_000)
 
-    // Now the adapter should be unhealthy
+    // Now the adapter should be unhealthy (3+ failures + >30s since last success)
     expect(hm.isHealthy(adapter)).toBe(false)
 
     const prevCallCount = adapter.callCount
-    // This dispatch should NOT call send (enqueue directly)
+    // This dispatch should NOT call send (enqueue directly, adapter unhealthy)
     hm.dispatch(adapter, createAlert({ title: 'alert-unhealthy' }))
     await vi.advanceTimersByTimeAsync(0)
 
     expect(adapter.callCount).toBe(prevCallCount)
 
-    hm.destroy()
+    await hm.destroy()
   })
 
   it('warning emitted once: console.warn called once, not on subsequent failures', async () => {
@@ -119,16 +144,18 @@ describe('HealthManager', () => {
     const adapter = createMockAdapter({ failCount: 100 })
     const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
 
-    // Dispatch 2 failures first
+    // First dispatch sends directly (queue empty), fails
     hm.dispatch(adapter, createAlert())
     await vi.advanceTimersByTimeAsync(0)
-    hm.dispatch(adapter, createAlert())
-    await vi.advanceTimersByTimeAsync(0)
+
+    // Drain retries fail, building up consecutiveFailures
+    await vi.advanceTimersByTimeAsync(10_000) // failure #2
+    await vi.advanceTimersByTimeAsync(10_000) // failure #3
 
     // Advance past 30s so lastSuccessAt is stale
     vi.advanceTimersByTime(31_000)
 
-    // 3rd failure triggers unhealthy (3 consecutive + >30s since last success)
+    // Now adapter is unhealthy. Dispatch triggers the warning.
     hm.dispatch(adapter, createAlert())
     await vi.advanceTimersByTimeAsync(0)
 
@@ -138,7 +165,7 @@ describe('HealthManager', () => {
 
     expect(warnCount).toBe(1)
 
-    // Additional dispatches should not produce more warnings (adapter is unhealthy, enqueues directly)
+    // Additional dispatches should not produce more warnings
     hm.dispatch(adapter, createAlert())
     await vi.advanceTimersByTimeAsync(0)
     hm.dispatch(adapter, createAlert())
@@ -151,40 +178,44 @@ describe('HealthManager', () => {
     expect(warnCountAfter).toBe(1)
 
     warnSpy.mockRestore()
-    hm.destroy()
+    await hm.destroy()
   })
 
   it('drain timer: on recovery, calls onRecovery callback with stats', async () => {
     const onRecovery = vi.fn()
-    // Adapter fails first 3 calls, succeeds after
+    // Adapter fails first 3 calls, succeeds after (call 4+)
     const adapter = createMockAdapter({ failCount: 3 })
     const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, onRecovery })
 
     // Suppress console.warn
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    // Dispatch 3 alerts that fail
-    for (let i = 0; i < 3; i++) {
-      hm.dispatch(adapter, createAlert({ title: `fail-${i}` }))
-      await vi.advanceTimersByTimeAsync(0)
-    }
-
-    // Advance past 30s to make unhealthy
-    vi.advanceTimersByTime(31_000)
-
-    // Trigger the 4th dispatch which will be unhealthy (just enqueue)
-    hm.dispatch(adapter, createAlert({ title: 'queued-while-unhealthy' }))
+    // First dispatch sends directly (queue empty), fails (call 1)
+    hm.dispatch(adapter, createAlert({ title: 'fail-0' }))
     await vi.advanceTimersByTimeAsync(0)
 
-    // Now advance to trigger drain timer (10s interval)
+    // Queue additional alerts (FIFO: queue non-empty, so these enqueue directly)
+    hm.dispatch(adapter, createAlert({ title: 'fail-1' }))
+    hm.dispatch(adapter, createAlert({ title: 'queued-while-unhealthy' }))
+
+    // Drain retry fails (call 2) — consecutiveFailures = 2
+    await vi.advanceTimersByTimeAsync(10_000)
+    // Drain retry fails (call 3) — consecutiveFailures = 3
     await vi.advanceTimersByTimeAsync(10_000)
 
-    // The drain should have tried to send the oldest queued entry and succeeded
+    // Advance past 30s to make unhealthy + ensure warnedAt gets set on next dispatch
+    vi.advanceTimersByTime(31_000)
+    hm.dispatch(adapter, createAlert({ title: 'enqueued-unhealthy' }))
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Now drain succeeds (call 4) — triggers recovery
+    await vi.advanceTimersByTimeAsync(10_000)
+
     expect(onRecovery).toHaveBeenCalledTimes(1)
     expect(onRecovery).toHaveBeenCalledWith('mock', expect.any(Number), expect.any(Number))
 
     warnSpy.mockRestore()
-    hm.destroy()
+    await hm.destroy()
   })
 
   it('expired entries (>1hr) are discarded during drain', async () => {
@@ -192,11 +223,17 @@ describe('HealthManager', () => {
     const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    // Dispatch alerts that fail
-    for (let i = 0; i < 3; i++) {
-      hm.dispatch(adapter, createAlert({ title: `fail-${i}` }))
-      await vi.advanceTimersByTimeAsync(0)
-    }
+    // First dispatch sends directly (queue empty), fails and enqueues
+    hm.dispatch(adapter, createAlert({ title: 'fail-0' }))
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Queue more alerts (FIFO: queue non-empty)
+    hm.dispatch(adapter, createAlert({ title: 'fail-1' }))
+    hm.dispatch(adapter, createAlert({ title: 'fail-2' }))
+
+    // Let drain retries fail to build up consecutiveFailures
+    await vi.advanceTimersByTimeAsync(10_000)
+    await vi.advanceTimersByTimeAsync(10_000)
 
     // Advance more than 1 hour + 30s (to be unhealthy AND entries expired)
     vi.advanceTimersByTime(3_700_000)
@@ -212,7 +249,7 @@ describe('HealthManager', () => {
     await vi.advanceTimersByTimeAsync(10_000)
 
     warnSpy.mockRestore()
-    hm.destroy()
+    await hm.destroy()
   })
 
   it('destroy clears timers', async () => {
@@ -226,7 +263,7 @@ describe('HealthManager', () => {
 
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
 
-    hm.destroy()
+    await hm.destroy()
 
     expect(clearIntervalSpy).toHaveBeenCalled()
 

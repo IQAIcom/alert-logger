@@ -69,7 +69,8 @@ export class AlertLogger {
   /** Reset the singleton — primarily for testing. */
   static reset(): void {
     if (AlertLogger.instance) {
-      AlertLogger.instance.destroy()
+      // Fire-and-forget: destroy is async but reset is used in tests
+      void AlertLogger.instance.destroy()
       AlertLogger.instance = null
     }
   }
@@ -98,9 +99,9 @@ export class AlertLogger {
     this.log('critical', title, message, err, opts)
   }
 
-  destroy(): void {
+  async destroy(): Promise<void> {
     this.aggregator.destroy()
-    this.healthManager.destroy()
+    await this.healthManager.destroy()
   }
 
   private log(
