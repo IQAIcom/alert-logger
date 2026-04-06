@@ -1,6 +1,6 @@
 import { Aggregator, type ResolvedEntry } from './aggregator.js'
 import { fingerprint } from './fingerprinter.js'
-import { formatDuration, HealthManager } from './health-manager.js'
+import { HealthManager } from './health-manager.js'
 import { Router } from './router.js'
 import type {
   AlertAdapter,
@@ -11,6 +11,7 @@ import type {
   ResolvedConfig,
 } from './types.js'
 import { resolveConfig } from './types.js'
+import { formatDuration } from './utils.js'
 
 interface AlertMeta {
   level: AlertLevel

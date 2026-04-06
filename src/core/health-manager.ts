@@ -3,8 +3,6 @@ import type { QueueEntry } from './retry-queue.js'
 import { RetryQueue } from './retry-queue.js'
 import type { AlertAdapter, FormattedAlert, HealthPolicy } from './types.js'
 
-export { formatDuration } from './utils.js'
-
 interface AdapterHealth {
   consecutiveFailures: number
   lastSuccessAt: number
@@ -42,6 +40,11 @@ export class HealthManager {
       this.adapters.set(adapter.name, health)
     }
     return health
+  }
+
+  queueSize(adapter: AlertAdapter): number {
+    const health = this.adapters.get(adapter.name)
+    return health ? health.queue.size : 0
   }
 
   isHealthy(adapter: AlertAdapter): boolean {

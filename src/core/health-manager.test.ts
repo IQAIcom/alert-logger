@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { formatDuration, HealthManager } from './health-manager.js'
+import { HealthManager } from './health-manager.js'
 import type { AlertAdapter, AlertLevel, FormattedAlert } from './types.js'
 import { DEFAULT_HEALTH } from './types.js'
+import { formatDuration } from './utils.js'
 
 function createMockAdapter(options?: {
   failCount?: number
@@ -307,15 +308,17 @@ describe('HealthManager', () => {
 
     hm.dispatch(adapter, createAlert())
     await vi.advanceTimersByTimeAsync(0)
+    expect(hm.queueSize(adapter)).toBe(1)
 
     // Build up failures for drain retries
     await vi.advanceTimersByTimeAsync(10_000)
     await vi.advanceTimersByTimeAsync(10_000)
+    expect(hm.queueSize(adapter)).toBe(1) // still in queue, not expired yet
 
     // Advance past custom expiry (60s) — entries should be discarded on next drain
     vi.advanceTimersByTime(61_000)
     await vi.advanceTimersByTimeAsync(10_000) // drain discards expired entry
-    await vi.advanceTimersByTimeAsync(10_000) // queue empty, timer cleared
+    expect(hm.queueSize(adapter)).toBe(0) // entry expired and removed
 
     warnSpy.mockRestore()
     await hm.destroy()
@@ -335,11 +338,11 @@ describe('HealthManager', () => {
 
     hm.dispatch(adapter, createAlert())
     await vi.advanceTimersByTimeAsync(0) // fails, enqueues with retryCount=0
+    expect(hm.queueSize(adapter)).toBe(1)
 
     // First drain retry fails → retryCount=1 → exceeds maxRetries=1 → dequeued
     await vi.advanceTimersByTimeAsync(5_000)
-    // Second drain should find empty queue
-    await vi.advanceTimersByTimeAsync(5_000)
+    expect(hm.queueSize(adapter)).toBe(0) // discarded after 1 retry
 
     warnSpy.mockRestore()
     await hm.destroy()
