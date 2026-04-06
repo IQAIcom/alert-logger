@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { formatDuration, HealthManager } from './health-manager.js'
+import { DEFAULT_HEALTH } from './types.js'
 import type { AlertAdapter, AlertLevel, FormattedAlert } from './types.js'
 
 function createMockAdapter(options?: {
@@ -58,7 +59,7 @@ describe('HealthManager', () => {
 
   it('healthy adapter: dispatch calls adapter.send directly', async () => {
     const adapter = createMockAdapter()
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })
     const alert = createAlert()
 
     hm.dispatch(adapter, alert)
@@ -75,7 +76,7 @@ describe('HealthManager', () => {
 
   it('FIFO: new alerts enqueue when queue is non-empty even if healthy', async () => {
     const adapter = createMockAdapter({ failCount: 1 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })
 
     // First dispatch: healthy + empty queue -> sends directly, fails
     hm.dispatch(adapter, createAlert({ title: 'first' }))
@@ -92,7 +93,7 @@ describe('HealthManager', () => {
 
   it('failed send: increments consecutiveFailures and enqueues', async () => {
     const adapter = createMockAdapter({ failCount: 1 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })
     const alert = createAlert()
 
     hm.dispatch(adapter, alert)
@@ -108,7 +109,7 @@ describe('HealthManager', () => {
 
   it('unhealthy after 3 failures + 30s: enqueues without calling send', async () => {
     const adapter = createMockAdapter({ failCount: 100 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })
 
     // First dispatch sends directly (queue empty + healthy), fails and enqueues
     hm.dispatch(adapter, createAlert({ title: 'alert-0' }))
@@ -146,7 +147,7 @@ describe('HealthManager', () => {
   it('warning emitted once: console.warn called once, not on subsequent failures', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const adapter = createMockAdapter({ failCount: 100 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })
 
     // First dispatch sends directly (queue empty), fails
     hm.dispatch(adapter, createAlert())
@@ -189,7 +190,7 @@ describe('HealthManager', () => {
     const onRecovery = vi.fn()
     // Adapter fails first 3 calls, succeeds after (call 4+)
     const adapter = createMockAdapter({ failCount: 3 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, onRecovery })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH, onRecovery })
 
     // Suppress console.warn
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -224,7 +225,7 @@ describe('HealthManager', () => {
 
   it('expired entries (>1hr) are discarded during drain', async () => {
     const adapter = createMockAdapter({ failCount: 100 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     // First dispatch sends directly (queue empty), fails and enqueues
@@ -258,7 +259,7 @@ describe('HealthManager', () => {
 
   it('destroy clears timers', async () => {
     const adapter = createMockAdapter({ failCount: 100 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null })
+    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     // Dispatch a failing alert to start drain timer

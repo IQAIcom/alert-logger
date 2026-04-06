@@ -1,7 +1,7 @@
 import { loadQueuesFromDisk, saveQueuesToDisk } from './queue-persistence.js'
 import type { QueueEntry } from './retry-queue.js'
 import { RetryQueue } from './retry-queue.js'
-import type { AlertAdapter, FormattedAlert } from './types.js'
+import type { AlertAdapter, FormattedAlert, HealthPolicy } from './types.js'
 export { formatDuration } from './utils.js'
 
 interface AdapterHealth {
@@ -15,6 +15,7 @@ interface AdapterHealth {
 interface HealthManagerConfig {
   maxQueueSize: number
   persistPath: string | null
+  policy: HealthPolicy
   onRecovery?: (adapterName: string, queuedCount: number, downtimeMs: number) => void
 }
 
@@ -45,7 +46,11 @@ export class HealthManager {
   isHealthy(adapter: AlertAdapter): boolean {
     const health = this.adapters.get(adapter.name)
     if (!health) return true
-    return !(health.consecutiveFailures >= 3 && Date.now() - health.lastSuccessAt > 30_000)
+    const { unhealthyThreshold, healthWindowMs } = this.config.policy
+    return !(
+      health.consecutiveFailures >= unhealthyThreshold &&
+      Date.now() - health.lastSuccessAt > healthWindowMs
+    )
   }
 
   dispatch(adapter: AlertAdapter, alert: FormattedAlert): void {
@@ -94,7 +99,7 @@ export class HealthManager {
 
     const timer = setInterval(() => {
       void this.drainOnce(adapter)
-    }, 10_000)
+    }, this.config.policy.drainIntervalMs)
     timer.unref?.()
     this.drainTimers.set(adapter.name, timer)
   }
@@ -117,8 +122,8 @@ export class HealthManager {
         return
       }
 
-      // Discard expired entries (>1 hour old)
-      if (Date.now() - entry.enqueuedAt > 3_600_000) {
+      // Discard expired entries
+      if (Date.now() - entry.enqueuedAt > this.config.policy.entryExpiryMs) {
         health.queue.dequeue()
         return
       }
@@ -151,7 +156,7 @@ export class HealthManager {
         // Send failed — track consecutive failures for health status
         health.consecutiveFailures++
         entry.retryCount++
-        if (entry.retryCount >= 3) {
+        if (entry.retryCount >= this.config.policy.maxRetries) {
           health.queue.dequeue()
         }
       }

@@ -37,6 +37,7 @@ export class AlertLogger {
     this.healthManager = new HealthManager({
       maxQueueSize: config.queue.maxSize,
       persistPath: config.queue.persistPath,
+      policy: config.health,
       onRecovery: (adapterName, queuedCount, downtimeMs) => {
         this.handleAdapterRecovery(adapterName, queuedCount, downtimeMs)
       },

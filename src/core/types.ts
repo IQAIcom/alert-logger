@@ -62,6 +62,19 @@ export interface RoutingConfig {
   pings?: Partial<Record<AlertLevel, string[]>>
 }
 
+export interface HealthPolicy {
+  /** Number of consecutive failures before marking adapter unhealthy (default: 3) */
+  unhealthyThreshold: number
+  /** Time since last success before health check fails, in ms (default: 30000) */
+  healthWindowMs: number
+  /** Interval between queue drain attempts, in ms (default: 10000) */
+  drainIntervalMs: number
+  /** Max retries before discarding a queued entry (default: 3) */
+  maxRetries: number
+  /** Time after which queued entries are discarded, in ms (default: 3600000) */
+  entryExpiryMs: number
+}
+
 export interface QueueConfig {
   maxSize: number
   persistPath: string | null
@@ -86,6 +99,7 @@ export interface AlertLoggerConfig {
   routing?: RoutingConfig
   environments?: Record<string, EnvironmentConfig>
   queue?: Partial<QueueConfig>
+  health?: Partial<HealthPolicy>
   fingerprint?: Partial<FingerprintConfig>
 }
 
@@ -96,6 +110,7 @@ export interface ResolvedConfig {
   aggregation: AggregationConfig
   routing: RoutingConfig
   queue: QueueConfig
+  health: HealthPolicy
   fingerprint: FingerprintConfig
   levels: AlertLevel[]
   pings: Partial<Record<AlertLevel, string[]>>
@@ -106,6 +121,14 @@ export const DEFAULT_AGGREGATION: AggregationConfig = {
   rampThreshold: 64,
   digestIntervalMs: 5 * 60_000,
   resolutionCooldownMs: 2 * 60_000,
+}
+
+export const DEFAULT_HEALTH: HealthPolicy = {
+  unhealthyThreshold: 3,
+  healthWindowMs: 30_000,
+  drainIntervalMs: 10_000,
+  maxRetries: 3,
+  entryExpiryMs: 3_600_000,
 }
 
 export const DEFAULT_QUEUE: QueueConfig = {
@@ -148,6 +171,7 @@ export function resolveConfig(config: AlertLoggerConfig): ResolvedConfig {
     aggregation,
     routing: config.routing ?? {},
     queue: { ...DEFAULT_QUEUE, ...config.queue },
+    health: { ...DEFAULT_HEALTH, ...config.health },
     fingerprint: { ...DEFAULT_FINGERPRINT, ...config.fingerprint },
     levels,
     pings,
