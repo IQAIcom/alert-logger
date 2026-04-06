@@ -6,7 +6,7 @@ export default defineConfig({
     'integrations/nestjs/index': 'src/integrations/nestjs/index.ts',
     'integrations/nextjs/index': 'src/integrations/nextjs/index.ts',
   },
-  format: ['esm'],
+  format: ['esm', 'cjs'],
   dts: true,
   sourcemap: true,
   clean: true,
