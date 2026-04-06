@@ -69,9 +69,10 @@ export function fingerprint(
     return md5(dedupKey)
   }
 
+  const normalizedTitle = normalizeMessage(title, config.normalizers)
   const normalizedMessage = normalizeMessage(message, config.normalizers)
   const stackKey = extractStackKey(error, config.stackDepth)
-  const errorName = error?.name ?? title
+  const errorName = error?.name ?? normalizedTitle
 
   return md5(errorName + normalizedMessage + stackKey)
 }

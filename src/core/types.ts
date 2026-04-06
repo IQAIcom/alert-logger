@@ -139,7 +139,7 @@ export const DEFAULT_QUEUE: QueueConfig = {
 }
 
 export const DEFAULT_FINGERPRINT: FingerprintConfig = {
-  stackDepth: 3,
+  stackDepth: 1,
   normalizers: [],
 }
 
