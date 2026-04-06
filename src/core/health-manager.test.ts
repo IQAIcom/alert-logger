@@ -395,6 +395,46 @@ describe('HealthManager', () => {
     await hm.destroy()
   })
 
+  it('drain-only unhealthy: onRecovery fires even without new dispatches', async () => {
+    const onRecovery = vi.fn()
+    // Fails first 4 calls, succeeds on call 5+
+    const adapter = createMockAdapter({ failCount: 4 })
+    const hm = new HealthManager({
+      maxQueueSize: 100,
+      persistPath: null,
+      policy: DEFAULT_HEALTH,
+      onRecovery,
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    // Single dispatch, then NO more dispatches — only drain retries
+    hm.dispatch(adapter, createAlert())
+    await vi.advanceTimersByTimeAsync(0) // call 1 fails
+
+    // Queue more so drain has work
+    hm.dispatch(adapter, createAlert())
+    hm.dispatch(adapter, createAlert())
+
+    // Drain retries build failures (calls 2, 3)
+    await vi.advanceTimersByTimeAsync(10_000)
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    // Advance past healthWindowMs — adapter becomes unhealthy during drain
+    vi.advanceTimersByTime(31_000)
+
+    // Drain fails (call 4) — warnedAt should be set here (not via dispatch)
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    // Drain succeeds (call 5) — recovery should fire
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    expect(onRecovery).toHaveBeenCalledTimes(1)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unhealthy'))
+
+    warnSpy.mockRestore()
+    await hm.destroy()
+  })
+
   it('destroy clears timers', async () => {
     const adapter = createMockAdapter({ failCount: 100 })
     const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH })

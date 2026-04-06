@@ -126,9 +126,12 @@ export class HealthManager {
         return
       }
 
-      // Discard expired entries
+      // Discard expired entries, re-drain immediately if more remain
       if (Date.now() - entry.enqueuedAt > this.config.policy.entryExpiryMs) {
         health.queue.dequeue()
+        if (!health.queue.isEmpty) {
+          setTimeout(() => void this.drainOnce(adapter), 0)
+        }
         return
       }
 
@@ -160,6 +163,15 @@ export class HealthManager {
         // Send failed — track consecutive failures for health status
         health.consecutiveFailures++
         entry.retryCount++
+
+        // Track unhealthy transition during drain (not just dispatch)
+        if (!this.isHealthy(adapter) && health.warnedAt === null) {
+          console.warn(
+            `[alert-logger] ${adapter.name} adapter is unhealthy (${health.consecutiveFailures} consecutive failures)`,
+          )
+          health.warnedAt = Date.now()
+        }
+
         if (entry.retryCount >= this.config.policy.maxRetries) {
           health.queue.dequeue()
         }
