@@ -187,6 +187,25 @@ describe('fingerprint', () => {
       expect(a).not.toBe(b)
     })
 
+    it('groups same error from different callers with default stackDepth', () => {
+      const stackA = [
+        'Error: test',
+        '    at throwSite (/app/src/shared.ts:10:5)',
+        '    at callerA (/app/src/a.ts:20:3)',
+        '    at handlerA (/app/src/routes-a.ts:30:1)',
+      ].join('\n')
+      const stackB = [
+        'Error: test',
+        '    at throwSite (/app/src/shared.ts:10:5)',
+        '    at callerB (/app/src/b.ts:40:3)',
+        '    at handlerB (/app/src/routes-b.ts:50:1)',
+      ].join('\n')
+
+      const a = fingerprint('E', 'test', makeErrorWithStack(stackA), cfg)
+      const b = fingerprint('E', 'test', makeErrorWithStack(stackB), cfg)
+      expect(a).toBe(b)
+    })
+
     it('includes file, line, and column in stack key', () => {
       const stackA = ['Error: test', '    at fn (/app/src/index.ts:10:5)'].join('\n')
       const stackB = ['Error: test', '    at fn (/app/src/index.ts:10:99)'].join('\n')
@@ -205,10 +224,16 @@ describe('fingerprint', () => {
       expect(hash).toMatch(/^[0-9a-f]{32}$/)
     })
 
-    it('uses title as errorName when error is undefined', () => {
+    it('uses normalized title as errorName when error is undefined', () => {
       const a = fingerprint('TitleA', 'same msg', undefined, cfg)
       const b = fingerprint('TitleB', 'same msg', undefined, cfg)
       expect(a).not.toBe(b)
+    })
+
+    it('normalizes dynamic parts in title when error is undefined', () => {
+      const a = fingerprint('GET /users/0xABC123DEF/positions', 'table missing', undefined, cfg)
+      const b = fingerprint('GET /users/0xDEF456ABC/positions', 'table missing', undefined, cfg)
+      expect(a).toBe(b)
     })
   })
 })
