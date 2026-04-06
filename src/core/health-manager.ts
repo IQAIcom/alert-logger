@@ -2,6 +2,7 @@ import { loadQueuesFromDisk, saveQueuesToDisk } from './queue-persistence.js'
 import type { QueueEntry } from './retry-queue.js'
 import { RetryQueue } from './retry-queue.js'
 import type { AlertAdapter, FormattedAlert } from './types.js'
+export { formatDuration } from './utils.js'
 
 interface AdapterHealth {
   consecutiveFailures: number
@@ -16,18 +17,6 @@ interface HealthManagerConfig {
   persistPath: string | null
   onRecovery?: (adapterName: string, queuedCount: number, downtimeMs: number) => void
 }
-
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
-}
-
-export { formatDuration }
 
 export class HealthManager {
   private readonly config: HealthManagerConfig
