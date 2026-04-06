@@ -44,6 +44,12 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "nestjs": ["./dist/integrations/nestjs/index.d.ts"],
+      "nextjs": ["./dist/integrations/nextjs/index.d.ts"]
+    }
+  },
   "files": [
     "dist"
   ],
