@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { formatDuration, HealthManager } from './health-manager.js'
-import { DEFAULT_HEALTH } from './types.js'
 import type { AlertAdapter, AlertLevel, FormattedAlert } from './types.js'
+import { DEFAULT_HEALTH } from './types.js'
 
 function createMockAdapter(options?: {
   failCount?: number
@@ -190,7 +190,12 @@ describe('HealthManager', () => {
     const onRecovery = vi.fn()
     // Adapter fails first 3 calls, succeeds after (call 4+)
     const adapter = createMockAdapter({ failCount: 3 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH, onRecovery })
+    const hm = new HealthManager({
+      maxQueueSize: 100,
+      persistPath: null,
+      policy: DEFAULT_HEALTH,
+      onRecovery,
+    })
 
     // Suppress console.warn
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -344,7 +349,12 @@ describe('HealthManager', () => {
     const onRecovery = vi.fn()
     // Fails first 4 calls, succeeds on call 5+
     const adapter = createMockAdapter({ failCount: 4 })
-    const hm = new HealthManager({ maxQueueSize: 100, persistPath: null, policy: DEFAULT_HEALTH, onRecovery })
+    const hm = new HealthManager({
+      maxQueueSize: 100,
+      persistPath: null,
+      policy: DEFAULT_HEALTH,
+      onRecovery,
+    })
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     // Send and fail (call 1)

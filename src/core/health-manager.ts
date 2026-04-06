@@ -2,6 +2,7 @@ import { loadQueuesFromDisk, saveQueuesToDisk } from './queue-persistence.js'
 import type { QueueEntry } from './retry-queue.js'
 import { RetryQueue } from './retry-queue.js'
 import type { AlertAdapter, FormattedAlert, HealthPolicy } from './types.js'
+
 export { formatDuration } from './utils.js'
 
 interface AdapterHealth {
