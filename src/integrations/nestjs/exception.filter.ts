@@ -24,18 +24,20 @@ export class AlertExceptionFilter extends BaseExceptionFilter {
     const path = request?.url ?? 'UNKNOWN'
     const ip = request?.ip ?? 'UNKNOWN'
 
+    const title = `${method} ${path}`
+
     if (exception instanceof HttpException) {
       const statusCode = exception.getStatus()
 
       if (statusCode >= 500) {
-        this.alert.error(exception.message, exception, {
+        this.alert.error(title, exception, {
           fields: { method, path, statusCode, ip },
         })
       }
     } else {
       const error = exception instanceof Error ? exception : new Error(String(exception))
 
-      this.alert.critical(error.message, error, {
+      this.alert.critical(title, error, {
         fields: { method, path, statusCode: 500, ip },
       })
     }

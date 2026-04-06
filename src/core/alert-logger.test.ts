@@ -139,6 +139,72 @@ describe('AlertLogger integration', () => {
     })
   })
 
+  describe('description option', () => {
+    it('uses description as message when provided on error()', async () => {
+      const adapter = new MockAdapter()
+      const logger = AlertLogger.init({
+        adapters: [adapter],
+        serviceName: 'test-service',
+        environment: 'production',
+      })
+
+      logger.error('Market Resolution Failed', {
+        description: 'Market abc-123 resolution failed, state reset to NONE',
+      })
+
+      await vi.waitFor(() => expect(adapter.sent.length).toBe(1))
+      expect(adapter.sent[0].title).toBe('Market Resolution Failed')
+      expect(adapter.sent[0].message).toBe('Market abc-123 resolution failed, state reset to NONE')
+    })
+
+    it('uses description as message when provided on warn()', async () => {
+      const adapter = new MockAdapter()
+      const logger = AlertLogger.init({
+        adapters: [adapter],
+        serviceName: 'test-service',
+        environment: 'production',
+      })
+
+      logger.warn('Indexer Health Changed', {
+        description: 'Status: healthy → unhealthy',
+      })
+
+      await vi.waitFor(() => expect(adapter.sent.length).toBe(1))
+      expect(adapter.sent[0].title).toBe('Indexer Health Changed')
+      expect(adapter.sent[0].message).toBe('Status: healthy → unhealthy')
+    })
+
+    it('falls back to title when no description or error', async () => {
+      const adapter = new MockAdapter()
+      const logger = AlertLogger.init({
+        adapters: [adapter],
+        serviceName: 'test-service',
+        environment: 'production',
+      })
+
+      logger.error('Something broke')
+
+      await vi.waitFor(() => expect(adapter.sent.length).toBe(1))
+      expect(adapter.sent[0].message).toBe('Something broke')
+    })
+
+    it('description takes priority over error.message', async () => {
+      const adapter = new MockAdapter()
+      const logger = AlertLogger.init({
+        adapters: [adapter],
+        serviceName: 'test-service',
+        environment: 'production',
+      })
+
+      logger.error('DB Failed', new Error('ECONNREFUSED'), {
+        description: 'Custom description here',
+      })
+
+      await vi.waitFor(() => expect(adapter.sent.length).toBe(1))
+      expect(adapter.sent[0].message).toBe('Custom description here')
+    })
+  })
+
   describe('singleton', () => {
     it('init() sets instance and getInstance() retrieves it', () => {
       const adapter = new MockAdapter()

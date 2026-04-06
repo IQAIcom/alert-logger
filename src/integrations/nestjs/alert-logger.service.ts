@@ -16,12 +16,21 @@ export class AlertLoggerService {
     this.logger.warn(title, this.mergeContext(options))
   }
 
-  error(title: string, error?: Error | string, options?: AlertOptions): void {
-    this.logger.error(title, error, this.mergeContext(options))
+  error(title: string, error?: Error | string | AlertOptions, options?: AlertOptions): void {
+    // When called as error("title", { ... }), pass through directly
+    if (error != null && typeof error === 'object' && !(error instanceof Error)) {
+      this.logger.error(title, this.mergeContext(error))
+    } else {
+      this.logger.error(title, error, this.mergeContext(options))
+    }
   }
 
-  critical(title: string, error?: Error | string, options?: AlertOptions): void {
-    this.logger.critical(title, error, this.mergeContext(options))
+  critical(title: string, error?: Error | string | AlertOptions, options?: AlertOptions): void {
+    if (error != null && typeof error === 'object' && !(error instanceof Error)) {
+      this.logger.critical(title, this.mergeContext(error))
+    } else {
+      this.logger.critical(title, error, this.mergeContext(options))
+    }
   }
 
   private mergeContext(options?: AlertOptions): AlertOptions {

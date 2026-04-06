@@ -3,6 +3,8 @@ export type AlertLevel = 'info' | 'warning' | 'critical'
 export type AggregationPhase = 'onset' | 'ramp' | 'sustained' | 'resolution'
 
 export interface AlertOptions {
+  /** Detailed message shown in the embed body/description. When omitted, the title is used. */
+  description?: string
   fields?: Record<string, string | number | boolean>
   tags?: string[]
   dedupKey?: string
