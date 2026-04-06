@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- [#9](https://github.com/IQAIcom/alert-logger/pull/9) [`c578183`](https://github.com/IQAIcom/alert-logger/commit/c5781833c3afc9acb062d22120cd6de7c0c45cbf) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add typesVersions for TypeScript moduleResolution "node" subpath type resolution
+
 ## 0.3.0
 
 ### Minor Changes
