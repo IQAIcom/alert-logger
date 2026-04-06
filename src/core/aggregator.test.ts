@@ -170,8 +170,25 @@ describe('Aggregator', () => {
   })
 
   describe('resolution detection', () => {
-    it('detects entries past the cooldown as resolved', () => {
-      aggregator.process('err-resolve')
+    function processNTimes(fp: string, n: number) {
+      for (let i = 0; i < n; i++) {
+        aggregator.process(fp)
+      }
+    }
+
+    it('does not resolve alerts below rampThreshold', () => {
+      // Process a few times (below default rampThreshold of 64)
+      processNTimes('err-few', 10)
+
+      vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 1)
+
+      const resolved = aggregator.checkResolutions()
+      expect(resolved).toHaveLength(0)
+    })
+
+    it('resolves alerts that exceeded rampThreshold (sustained crisis)', () => {
+      // Process more than rampThreshold (default 64)
+      processNTimes('err-resolve', 65)
 
       // Advance past resolution cooldown (default 2 minutes)
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 1)
@@ -179,7 +196,7 @@ describe('Aggregator', () => {
       const resolved = aggregator.checkResolutions()
       expect(resolved).toHaveLength(1)
       expect(resolved[0].fingerprint).toBe('err-resolve')
-      expect(resolved[0].count).toBe(1)
+      expect(resolved[0].count).toBe(65)
     })
 
     it('does not resolve entries that are still active', () => {
@@ -193,7 +210,7 @@ describe('Aggregator', () => {
     })
 
     it('does not re-resolve already resolved entries', () => {
-      aggregator.process('err-once')
+      processNTimes('err-re-resolve', 65)
 
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 1)
 
@@ -207,10 +224,10 @@ describe('Aggregator', () => {
 
     it('includes peakRate and timing info in resolved entries', () => {
       const startTime = Date.now()
-      aggregator.process('err-info')
+      processNTimes('err-info', 64)
 
       vi.advanceTimersByTime(1000)
-      aggregator.process('err-info')
+      aggregator.process('err-info') // count=65, exceeds rampThreshold
 
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 1)
 
@@ -222,8 +239,14 @@ describe('Aggregator', () => {
   })
 
   describe('state cleanup', () => {
+    function processNTimes(fp: string, n: number) {
+      for (let i = 0; i < n; i++) {
+        aggregator.process(fp)
+      }
+    }
+
     it('evicts entries after resolution + grace period (5 minutes)', () => {
-      aggregator.process('err-evict')
+      processNTimes('err-evict', 65)
 
       // Advance past cooldown to trigger resolution
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 1)
@@ -239,8 +262,25 @@ describe('Aggregator', () => {
       expect(result.count).toBe(1)
     })
 
+    it('evicts low-count entries after cooldown + grace period', () => {
+      aggregator.process('err-low-evict')
+
+      // Advance past cooldown — marks as resolution (but no resolved notification)
+      vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 1)
+      aggregator.checkResolutions()
+
+      // Advance past grace period
+      vi.advanceTimersByTime(5 * 60_000 + 1)
+      aggregator.checkResolutions()
+
+      // Should create a fresh onset
+      const result = aggregator.process('err-low-evict')
+      expect(result.phase).toBe('onset')
+      expect(result.count).toBe(1)
+    })
+
     it('does not evict entries before grace period expires', () => {
-      aggregator.process('err-keep')
+      processNTimes('err-keep', 65)
 
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 1)
       aggregator.checkResolutions()
@@ -250,23 +290,34 @@ describe('Aggregator', () => {
       aggregator.checkResolutions()
 
       // Processing should NOT create a fresh onset (state still exists in resolution)
-      // The entry is still in the map with phase 'resolution', but process() will
-      // increment the existing state
       const result = aggregator.process('err-keep')
-      expect(result.count).toBe(2)
+      expect(result.count).toBe(66)
     })
   })
 
   describe('startResolutionTimer', () => {
-    it('calls onResolved callback for resolved entries', () => {
+    it('calls onResolved callback for sustained alerts', () => {
       const onResolved = vi.fn()
-      aggregator.process('err-timer')
+      for (let i = 0; i < 65; i++) aggregator.process('err-timer')
       aggregator.startResolutionTimer(onResolved)
 
       // Advance past cooldown + the 30s check interval
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 30_000 + 1)
 
       expect(onResolved).toHaveBeenCalledWith(expect.objectContaining({ fingerprint: 'err-timer' }))
+    })
+
+    it('does not call onResolved for low-count entries', () => {
+      const onResolved = vi.fn()
+      aggregator.process('err-low')
+      aggregator.process('err-low')
+      aggregator.process('err-low')
+      aggregator.startResolutionTimer(onResolved)
+
+      // Advance past cooldown + the 30s check interval
+      vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 30_000 + 1)
+
+      expect(onResolved).not.toHaveBeenCalled()
     })
 
     it('does not start multiple timers', () => {
@@ -276,7 +327,7 @@ describe('Aggregator', () => {
       aggregator.startResolutionTimer(onResolved1)
       aggregator.startResolutionTimer(onResolved2)
 
-      aggregator.process('err-multi')
+      for (let i = 0; i < 65; i++) aggregator.process('err-multi')
 
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.resolutionCooldownMs + 30_000 + 1)
 

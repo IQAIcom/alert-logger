@@ -144,14 +144,20 @@ export class Aggregator {
       }
 
       if (now - state.lastSeen >= this.config.resolutionCooldownMs) {
+        // Only send resolution for alerts that reached the sustained phase
+        // (count > rampThreshold). A few sporadic failures aren't a "crisis"
+        // worth announcing as resolved — resolution is for ongoing incidents
+        // that generated a flood of alerts and then stopped.
+        if (state.count > this.config.rampThreshold) {
+          resolved.push({
+            fingerprint,
+            count: state.count,
+            firstSeen: state.firstSeen,
+            lastSeen: state.lastSeen,
+            peakRate: state.peakRate,
+          })
+        }
         state.phase = 'resolution'
-        resolved.push({
-          fingerprint,
-          count: state.count,
-          firstSeen: state.firstSeen,
-          lastSeen: state.lastSeen,
-          peakRate: state.peakRate,
-        })
       }
     })
 

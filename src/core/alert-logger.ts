@@ -76,22 +76,24 @@ export class AlertLogger {
   }
 
   info(title: string, options?: AlertOptions): void {
-    this.log('info', title, title, undefined, options)
+    const message = options?.description ?? title
+    this.log('info', title, message, undefined, options)
   }
 
   warn(title: string, options?: AlertOptions): void {
-    this.log('warning', title, title, undefined, options)
+    const message = options?.description ?? title
+    this.log('warning', title, message, undefined, options)
   }
 
-  error(title: string, error?: Error | string, options?: AlertOptions): void {
+  error(title: string, error?: Error | string | AlertOptions, options?: AlertOptions): void {
     const [err, opts] = this.normalizeErrorArgs(error, options)
-    const message = err?.message ?? title
+    const message = opts?.description ?? err?.message ?? title
     this.log('critical', title, message, err, opts)
   }
 
-  critical(title: string, error?: Error | string, options?: AlertOptions): void {
+  critical(title: string, error?: Error | string | AlertOptions, options?: AlertOptions): void {
     const [err, opts] = this.normalizeErrorArgs(error, options)
-    const message = err?.message ?? title
+    const message = opts?.description ?? err?.message ?? title
     this.log('critical', title, message, err, opts)
   }
 
@@ -227,9 +229,13 @@ export class AlertLogger {
   }
 
   private normalizeErrorArgs(
-    error?: Error | string,
+    error?: Error | string | AlertOptions,
     options?: AlertOptions,
   ): [Error | undefined, AlertOptions | undefined] {
+    // Allow error("title", { description: ... }) without an intermediate undefined
+    if (error != null && typeof error === 'object' && !(error instanceof Error)) {
+      return [undefined, error]
+    }
     if (typeof error === 'string') {
       return [new Error(error), options]
     }
