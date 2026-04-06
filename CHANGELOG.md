@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- [#6](https://github.com/IQAIcom/alert-logger/pull/6) [`83c2811`](https://github.com/IQAIcom/alert-logger/commit/83c281125fc637731f09c1753fa5c9702fc9f874) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add configurable HealthPolicy for adapter health/retry behavior
+
+  - New `health` config option with `unhealthyThreshold`, `healthWindowMs`, `drainIntervalMs`, `maxRetries`, and `entryExpiryMs`
+  - Extract shared `formatDuration` utility to eliminate duplication between health-manager and discord formatter
+  - Fix drain-only recovery: `onRecovery` now fires when adapters become unhealthy purely through background drain retries
+  - Immediate re-drain after discarding expired queue entries for faster stale queue cleanup
+
+### Patch Changes
+
+- [#8](https://github.com/IQAIcom/alert-logger/pull/8) [`0746d58`](https://github.com/IQAIcom/alert-logger/commit/0746d5833628db1af3d2d985031dd672c5fd484a) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add CommonJS build output alongside ESM for compatibility with projects using `moduleResolution: "node"`
+
 ## 0.2.0
 
 ### Minor Changes
