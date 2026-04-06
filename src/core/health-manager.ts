@@ -1,7 +1,7 @@
 import { loadQueuesFromDisk, saveQueuesToDisk } from './queue-persistence.js'
 import type { QueueEntry } from './retry-queue.js'
 import { RetryQueue } from './retry-queue.js'
-import type { AlertAdapter, FormattedAlert } from './types.js'
+import type { AlertAdapter, FormattedAlert, HealthPolicy } from './types.js'
 
 interface AdapterHealth {
   consecutiveFailures: number
@@ -14,20 +14,9 @@ interface AdapterHealth {
 interface HealthManagerConfig {
   maxQueueSize: number
   persistPath: string | null
+  policy: HealthPolicy
   onRecovery?: (adapterName: string, queuedCount: number, downtimeMs: number) => void
 }
-
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
-}
-
-export { formatDuration }
 
 export class HealthManager {
   private readonly config: HealthManagerConfig
@@ -53,10 +42,19 @@ export class HealthManager {
     return health
   }
 
+  queueSize(adapter: AlertAdapter): number {
+    const health = this.adapters.get(adapter.name)
+    return health ? health.queue.size : 0
+  }
+
   isHealthy(adapter: AlertAdapter): boolean {
     const health = this.adapters.get(adapter.name)
     if (!health) return true
-    return !(health.consecutiveFailures >= 3 && Date.now() - health.lastSuccessAt > 30_000)
+    const { unhealthyThreshold, healthWindowMs } = this.config.policy
+    return !(
+      health.consecutiveFailures >= unhealthyThreshold &&
+      Date.now() - health.lastSuccessAt > healthWindowMs
+    )
   }
 
   dispatch(adapter: AlertAdapter, alert: FormattedAlert): void {
@@ -105,7 +103,7 @@ export class HealthManager {
 
     const timer = setInterval(() => {
       void this.drainOnce(adapter)
-    }, 10_000)
+    }, this.config.policy.drainIntervalMs)
     timer.unref?.()
     this.drainTimers.set(adapter.name, timer)
   }
@@ -128,9 +126,12 @@ export class HealthManager {
         return
       }
 
-      // Discard expired entries (>1 hour old)
-      if (Date.now() - entry.enqueuedAt > 3_600_000) {
+      // Discard expired entries, re-drain immediately if more remain
+      if (Date.now() - entry.enqueuedAt > this.config.policy.entryExpiryMs) {
         health.queue.dequeue()
+        if (!health.queue.isEmpty) {
+          setTimeout(() => void this.drainOnce(adapter), 0)
+        }
         return
       }
 
@@ -162,7 +163,16 @@ export class HealthManager {
         // Send failed — track consecutive failures for health status
         health.consecutiveFailures++
         entry.retryCount++
-        if (entry.retryCount >= 3) {
+
+        // Track unhealthy transition during drain (not just dispatch)
+        if (!this.isHealthy(adapter) && health.warnedAt === null) {
+          console.warn(
+            `[alert-logger] ${adapter.name} adapter is unhealthy (${health.consecutiveFailures} consecutive failures)`,
+          )
+          health.warnedAt = Date.now()
+        }
+
+        if (entry.retryCount >= this.config.policy.maxRetries) {
           health.queue.dequeue()
         }
       }

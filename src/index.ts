@@ -19,6 +19,7 @@ export type {
   EnvironmentConfig,
   FingerprintConfig,
   FormattedAlert,
+  HealthPolicy,
   NormalizerRule,
   QueueConfig,
   ResolvedConfig,

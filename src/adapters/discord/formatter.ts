@@ -1,4 +1,5 @@
 import type { FormattedAlert } from '../../core/types.js'
+import { formatDuration } from '../../core/utils.js'
 
 export interface DiscordEmbed {
   title: string
@@ -30,16 +31,6 @@ function sanitize(text: string): string {
     .replace(/@here/gi, '@\u200Bhere')
     .replace(/<@[!&]?\d+>/g, '[mention]')
     .replace(/<#\d+>/g, '[channel]')
-}
-
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
 }
 
 export function formatDiscordEmbed(alert: FormattedAlert): DiscordEmbed {
