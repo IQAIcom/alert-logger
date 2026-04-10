@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FormattedAlert } from '../../core/types.js'
-import { DiscordAdapter } from './discord-adapter.js'
+import { SlackAdapter } from './slack-adapter.js'
 
 function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
   return {
@@ -25,14 +25,14 @@ function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
   }
 }
 
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/123/abc'
+const WEBHOOK_URL = 'https://hooks.slack.com/services/T00/B00/xxx'
 
-describe('DiscordAdapter', () => {
-  let adapter: DiscordAdapter
+describe('SlackAdapter', () => {
+  let adapter: SlackAdapter
   let mockFetch: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    adapter = new DiscordAdapter({ webhookUrl: WEBHOOK_URL })
+    adapter = new SlackAdapter({ webhookUrl: WEBHOOK_URL })
     mockFetch = vi.fn()
     vi.stubGlobal('fetch', mockFetch)
   })
@@ -54,17 +54,17 @@ describe('DiscordAdapter', () => {
     expect(options.headers).toEqual({ 'Content-Type': 'application/json' })
 
     const body = JSON.parse(options.body)
-    expect(body.embeds).toBeDefined()
-    expect(body.embeds).toHaveLength(1)
-    // No mentions configured, so content should be absent
-    expect(body.content).toBeUndefined()
+    expect(body.attachments).toBeDefined()
+    expect(body.attachments).toHaveLength(1)
+    // No mentions configured, so text should be absent
+    expect(body.text).toBeUndefined()
   })
 
   it('send() routes to level-specific channel', async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
 
-    const criticalUrl = 'https://discord.com/api/webhooks/999/critical'
-    adapter = new DiscordAdapter({
+    const criticalUrl = 'https://hooks.slack.com/services/T00/B00/critical'
+    adapter = new SlackAdapter({
       webhookUrl: WEBHOOK_URL,
       channels: { critical: criticalUrl },
     })
@@ -77,10 +77,10 @@ describe('DiscordAdapter', () => {
   it('send() routes to tag-specific channel with priority over level', async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
 
-    const paymentsUrl = 'https://discord.com/api/webhooks/999/payments'
-    adapter = new DiscordAdapter({
+    const paymentsUrl = 'https://hooks.slack.com/services/T00/B00/payments'
+    adapter = new SlackAdapter({
       webhookUrl: WEBHOOK_URL,
-      channels: { critical: 'https://discord.com/api/webhooks/999/critical' },
+      channels: { critical: 'https://hooks.slack.com/services/T00/B00/critical' },
       tags: { payments: paymentsUrl },
     })
     await adapter.send(makeAlert({ level: 'critical', options: { tags: ['payments'] } }))
@@ -89,30 +89,30 @@ describe('DiscordAdapter', () => {
     expect(url).toBe(paymentsUrl)
   })
 
-  it('send() includes mentions as content field', async () => {
+  it('send() includes mentions as text field', async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
 
-    adapter = new DiscordAdapter({
+    adapter = new SlackAdapter({
       webhookUrl: WEBHOOK_URL,
-      mentions: { critical: ['<@123>', '<@&456>'] },
+      mentions: { critical: ['<@U123>', '<@U456>'] },
     })
     await adapter.send(makeAlert({ level: 'critical' }))
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.content).toBe('<@123> <@&456>')
+    expect(body.text).toBe('<@U123> <@U456>')
   })
 
-  it('send() omits content when no mentions for level', async () => {
+  it('send() omits text when no mentions for level', async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
 
-    adapter = new DiscordAdapter({
+    adapter = new SlackAdapter({
       webhookUrl: WEBHOOK_URL,
-      mentions: { critical: ['<@123>'] },
+      mentions: { critical: ['<@U123>'] },
     })
     await adapter.send(makeAlert({ level: 'info' }))
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.content).toBeUndefined()
+    expect(body.text).toBeUndefined()
   })
 
   it('send() retries on 429 with Retry-After header', async () => {
@@ -139,12 +139,12 @@ describe('DiscordAdapter', () => {
     mockFetch.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }))
 
     const alert = makeAlert()
-    await expect(adapter.send(alert)).rejects.toThrow('Discord webhook returned 403')
+    await expect(adapter.send(alert)).rejects.toThrow('Slack webhook returned 403')
   })
 
-  it('rateLimits() returns 30/60s', () => {
+  it('rateLimits() returns 1/1s', () => {
     const limits = adapter.rateLimits()
-    expect(limits).toEqual({ maxPerWindow: 30, windowMs: 60_000 })
+    expect(limits).toEqual({ maxPerWindow: 1, windowMs: 1_000 })
   })
 
   it('healthy() returns true', async () => {

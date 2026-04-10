@@ -1,15 +1,15 @@
 import type { AlertAdapter, AlertLevel, FormattedAlert } from '../../core/types.js'
-import { formatDiscordEmbed } from './formatter.js'
+import { formatSlackPayload } from './formatter.js'
 
-export interface DiscordAdapterOptions {
+export interface SlackAdapterOptions {
   webhookUrl: string
   channels?: Partial<Record<AlertLevel, string>>
   tags?: Record<string, string>
   mentions?: Partial<Record<AlertLevel, string[]>>
 }
 
-export class DiscordAdapter implements AlertAdapter {
-  readonly name = 'discord' as const
+export class SlackAdapter implements AlertAdapter {
+  readonly name = 'slack' as const
   levels: AlertLevel[] = ['info', 'warning', 'critical']
 
   private readonly webhookUrl: string
@@ -17,7 +17,7 @@ export class DiscordAdapter implements AlertAdapter {
   private readonly tags: Record<string, string>
   private readonly mentions: Partial<Record<AlertLevel, string[]>>
 
-  constructor(options: DiscordAdapterOptions) {
+  constructor(options: SlackAdapterOptions) {
     this.webhookUrl = options.webhookUrl
     this.channels = options.channels ?? {}
     this.tags = options.tags ?? {}
@@ -25,20 +25,20 @@ export class DiscordAdapter implements AlertAdapter {
   }
 
   rateLimits() {
-    return { maxPerWindow: 30, windowMs: 60_000 }
+    return { maxPerWindow: 1, windowMs: 1_000 }
   }
 
   async send(alert: FormattedAlert): Promise<void> {
-    const embed = formatDiscordEmbed(alert)
+    const payload = formatSlackPayload(alert)
     const { url, mentions } = this.resolve(alert.level, alert.options.tags)
 
-    const payload: Record<string, unknown> = { embeds: [embed] }
+    const body: Record<string, unknown> = { ...payload }
 
     if (mentions.length > 0) {
-      payload.content = mentions.join(' ')
+      body.text = mentions.join(' ')
     }
 
-    await this.postWebhook(url, payload)
+    await this.postWebhook(url, body)
   }
 
   async healthy(): Promise<boolean> {
@@ -80,7 +80,7 @@ export class DiscordAdapter implements AlertAdapter {
     }
 
     if (!response.ok) {
-      throw new Error(`Discord webhook returned ${response.status}: ${await response.text()}`)
+      throw new Error(`Slack webhook returned ${response.status}: ${await response.text()}`)
     }
   }
 }

@@ -19,7 +19,6 @@ function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
       lastSeen: Date.now(),
       peakRate: 0,
     },
-    pings: [],
     environmentBadge: '[PROD]',
     ...overrides,
   }

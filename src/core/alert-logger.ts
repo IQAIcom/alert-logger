@@ -1,7 +1,6 @@
 import { Aggregator, type ResolvedEntry } from './aggregator.js'
 import { fingerprint } from './fingerprinter.js'
 import { HealthManager } from './health-manager.js'
-import { Router } from './router.js'
 import type {
   AlertAdapter,
   AlertLevel,
@@ -24,7 +23,6 @@ export class AlertLogger {
 
   private readonly config: ResolvedConfig
   private readonly aggregator: Aggregator
-  private readonly router: Router
   private readonly adapters: AlertAdapter[]
   private readonly healthManager: HealthManager
   /** Track original alert metadata per fingerprint for resolution messages */
@@ -33,7 +31,6 @@ export class AlertLogger {
   private constructor(config: ResolvedConfig) {
     this.config = config
     this.aggregator = new Aggregator(config.aggregation)
-    this.router = new Router(config.routing, config.pings)
     this.adapters = config.adapters
     this.healthManager = new HealthManager({
       maxQueueSize: config.queue.maxSize,
@@ -123,8 +120,6 @@ export class AlertLogger {
     const result = this.aggregator.process(fp)
     if (!result.shouldSend) return
 
-    const routing = this.router.route(level, opts.tags)
-
     const formatted: FormattedAlert = {
       level,
       title,
@@ -143,8 +138,6 @@ export class AlertLogger {
         lastSeen: result.lastSeen,
         peakRate: result.peakRate,
       },
-      webhookUrl: routing.webhookUrl,
-      pings: routing.pings,
       environmentBadge: this.config.environmentBadge,
     }
 
@@ -172,7 +165,6 @@ export class AlertLogger {
         lastSeen: entry.lastSeen,
         peakRate: entry.peakRate,
       },
-      pings: [],
       environmentBadge: this.config.environmentBadge,
     }
 
@@ -207,7 +199,6 @@ export class AlertLogger {
         lastSeen: Date.now(),
         peakRate: 0,
       },
-      pings: [],
       environmentBadge: this.config.environmentBadge,
     }
 
