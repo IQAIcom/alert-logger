@@ -1,5 +1,5 @@
 import type { AlertAdapter, AlertLevel, FormattedAlert } from '../../core/types.js'
-import { formatTelegramMessage } from './formatter.js'
+import { formatTelegramMessage, MAX_MESSAGE_LENGTH } from './formatter.js'
 
 export interface TelegramAdapterOptions {
   botToken: string
@@ -36,7 +36,12 @@ export class TelegramAdapter implements AlertAdapter {
     const { topicId, mentions } = this.resolve(alert.level, alert.options.tags)
 
     if (mentions.length > 0) {
-      text = `${mentions.join(' ')}\n\n${text}`
+      const prefix = `${mentions.join(' ')}\n\n`
+      text = `${prefix}${text}`
+      // Re-enforce Telegram's message limit after adding mentions
+      if (text.length > MAX_MESSAGE_LENGTH) {
+        text = `${text.slice(0, MAX_MESSAGE_LENGTH - 1)}\u2026`
+      }
     }
 
     const body: Record<string, unknown> = {

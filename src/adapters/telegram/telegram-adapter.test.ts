@@ -104,6 +104,21 @@ describe('TelegramAdapter', () => {
     expect(body.text).toMatch(/^@admin @oncall\n/)
   })
 
+  it('send() keeps message within 4096 chars even with mentions', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    adapter = new TelegramAdapter({
+      botToken: BOT_TOKEN,
+      chatId: CHAT_ID,
+      mentions: { critical: ['@oncall_dev', '@team_lead'] },
+    })
+    // Use a message large enough that the formatter returns near the 4096 limit
+    await adapter.send(makeAlert({ level: 'critical', message: 'X'.repeat(4000) }))
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.text.length).toBeLessThanOrEqual(4096)
+  })
+
   it('send() retries on 429 with body-based retry_after', async () => {
     vi.useFakeTimers()
 

@@ -29,6 +29,18 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}\u2026` : text
 }
 
+/**
+ * Sanitize text to prevent Slack mention/link injection in mrkdwn blocks.
+ * Escapes &, <, > and neutralizes @channel/@here/@everyone patterns.
+ */
+function sanitize(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/@(everyone|channel|here)/gi, '@\u200B$1')
+}
+
 export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
   const { aggregation } = alert
   const phase = aggregation.phase
@@ -45,9 +57,9 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
     case 'onset': {
       const title = truncate(`${badge} [${alert.level.toUpperCase()}] ${alert.title}`, 150)
 
-      let body = alert.message
+      let body = sanitize(alert.message)
       if (alert.error?.stack) {
-        body += `\n\n\`\`\`\n${alert.error.stack}\n\`\`\``
+        body += `\n\n\`\`\`\n${sanitize(alert.error.stack)}\n\`\`\``
       }
       body = truncate(body, 3000)
 
@@ -65,7 +77,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
       if (alert.options.fields) {
         const fields = Object.entries(alert.options.fields).map(([key, value]) => ({
           type: 'mrkdwn' as const,
-          text: `*${key}:* ${String(value)}`,
+          text: `*${sanitize(key)}:* ${sanitize(String(value))}`,
         }))
         blocks.push({ type: 'section', fields })
       }
@@ -85,7 +97,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
         },
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: truncate(alert.message, 3000) },
+          text: { type: 'mrkdwn', text: truncate(sanitize(alert.message), 3000) },
         },
       )
       break
@@ -104,7 +116,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
         },
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: truncate(alert.message, 3000) },
+          text: { type: 'mrkdwn', text: truncate(sanitize(alert.message), 3000) },
         },
       )
       break

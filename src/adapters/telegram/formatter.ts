@@ -8,16 +8,27 @@ const SEVERITY_EMOJI: Record<string, string> = {
 }
 
 const RESOLUTION_EMOJI = '\u2705'
-const MAX_MESSAGE_LENGTH = 4096
+export const MAX_MESSAGE_LENGTH = 4096
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}\u2026` : text
+  if (text.length <= max) return text
+  let sliced = text.slice(0, max - 1)
+  // Don't cut inside an HTML entity (&amp; etc)
+  const lastAmp = sliced.lastIndexOf('&')
+  if (lastAmp !== -1 && !sliced.slice(lastAmp).includes(';')) {
+    sliced = sliced.slice(0, lastAmp)
+  }
+  return `${sliced}\u2026`
 }
 
+/**
+ * Truncate to a limit and guarantee all HTML tags are balanced.
+ * Strategy: truncate the plain text content of each part before wrapping in tags.
+ */
 export function formatTelegramMessage(alert: FormattedAlert): string {
   const { aggregation } = alert
   const phase = aggregation.phase
@@ -27,14 +38,18 @@ export function formatTelegramMessage(alert: FormattedAlert): string {
   const badge = escapeHtml(alert.environmentBadge)
   const parts: string[] = []
 
+  const footer = `<i>Service: ${escapeHtml(alert.serviceName)} | ${new Date(alert.timestamp).toISOString()}</i>`
+
   switch (phase) {
     case 'onset': {
       const emoji = SEVERITY_EMOJI[alert.level] ?? SEVERITY_EMOJI.info
-      parts.push(`${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle}</b>`)
-      parts.push('', safeMessage)
+      const header = `${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle}</b>`
+      parts.push(header, '', safeMessage)
 
       if (alert.error?.stack) {
-        parts.push('', `<code>${escapeHtml(alert.error.stack)}</code>`)
+        // Truncate stack content before wrapping in <code> so tags stay balanced
+        const safeStack = truncate(escapeHtml(alert.error.stack), 2000)
+        parts.push('', `<code>${safeStack}</code>`)
       }
 
       if (alert.options.fields) {
@@ -73,10 +88,15 @@ export function formatTelegramMessage(alert: FormattedAlert): string {
     }
   }
 
-  parts.push(
-    '',
-    `<i>Service: ${escapeHtml(alert.serviceName)} | ${new Date(alert.timestamp).toISOString()}</i>`,
-  )
+  parts.push('', footer)
 
-  return truncate(parts.join('\n'), MAX_MESSAGE_LENGTH)
+  const joined = parts.join('\n')
+
+  // If still over limit after pre-truncating content, drop code blocks and re-join
+  if (joined.length > MAX_MESSAGE_LENGTH) {
+    const withoutCode = parts.filter((p) => !p.startsWith('<code>'))
+    return truncate(withoutCode.join('\n'), MAX_MESSAGE_LENGTH)
+  }
+
+  return joined
 }

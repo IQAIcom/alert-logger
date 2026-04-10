@@ -213,5 +213,25 @@ describe('formatTelegramMessage', () => {
 
       expect(msg.length).toBeLessThanOrEqual(4096)
     })
+
+    it('keeps HTML tags balanced when truncating long stack traces', () => {
+      const error = new Error('boom')
+      error.stack = 'X'.repeat(5000)
+      const alert = makeAlert({ error })
+      const msg = formatTelegramMessage(alert)
+
+      expect(msg.length).toBeLessThanOrEqual(4096)
+      // If <code> is present, it must be closed
+      if (msg.includes('<code>')) {
+        expect(msg).toContain('</code>')
+      }
+      // <b> and <i> must always be closed
+      const openB = (msg.match(/<b>/g) || []).length
+      const closeB = (msg.match(/<\/b>/g) || []).length
+      expect(openB).toBe(closeB)
+      const openI = (msg.match(/<i>/g) || []).length
+      const closeI = (msg.match(/<\/i>/g) || []).length
+      expect(openI).toBe(closeI)
+    })
   })
 })

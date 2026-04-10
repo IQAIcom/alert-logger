@@ -230,6 +230,37 @@ describe('formatSlackPayload', () => {
     })
   })
 
+  describe('mrkdwn sanitization', () => {
+    it('escapes angle brackets to prevent mention injection in message', () => {
+      const alert = makeAlert({ message: 'Triggered by <@U123> and <!channel>' })
+      const payload = formatSlackPayload(alert)
+
+      const section = payload.attachments[0].blocks[1]
+      expect(section.text?.text).not.toContain('<@U123>')
+      expect(section.text?.text).not.toContain('<!channel>')
+      expect(section.text?.text).toContain('&lt;@U123&gt;')
+    })
+
+    it('neutralizes @everyone/@here/@channel in message', () => {
+      const alert = makeAlert({ message: 'Alert @everyone and @here' })
+      const payload = formatSlackPayload(alert)
+
+      const section = payload.attachments[0].blocks[1]
+      expect(section.text?.text).not.toMatch(/@everyone(?!\u200B)/)
+      expect(section.text?.text).not.toMatch(/@here(?!\u200B)/)
+    })
+
+    it('sanitizes field keys and values', () => {
+      const alert = makeAlert({
+        options: { fields: { '<key>': '<@U999>' } },
+      })
+      const payload = formatSlackPayload(alert)
+      const fieldsBlock = payload.attachments[0].blocks.find((b) => b.fields !== undefined)
+      expect(fieldsBlock?.fields?.[0].text).toContain('&lt;key&gt;')
+      expect(fieldsBlock?.fields?.[0].text).toContain('&lt;@U999&gt;')
+    })
+  })
+
   describe('severity colors', () => {
     it('uses blue for info', () => {
       const alert = makeAlert({ level: 'info' })
