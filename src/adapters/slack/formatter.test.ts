@@ -83,10 +83,50 @@ describe('formatSlackPayload', () => {
 			expect(fieldsBlock?.fields).toHaveLength(2)
 			expect(fieldsBlock?.fields).toEqual(
 				expect.arrayContaining([
-					expect.objectContaining({ type: 'mrkdwn', text: '*userId*\n42' }),
-					expect.objectContaining({ type: 'mrkdwn', text: '*region*\nus-east-1' }),
+					expect.objectContaining({ type: 'mrkdwn', text: '*userId:* 42' }),
+					expect.objectContaining({ type: 'mrkdwn', text: '*region:* us-east-1' }),
 				]),
 			)
+		})
+	})
+
+	describe('context block in all phases', () => {
+		it('includes context block in ramp phase', () => {
+			const alert = makeAlert({
+				aggregation: {
+					phase: 'ramp',
+					fingerprint: 'abc123',
+					count: 10,
+					suppressedSince: 5,
+					firstSeen: Date.now(),
+					lastSeen: Date.now(),
+					peakRate: 0,
+				},
+			})
+			const payload = formatSlackPayload(alert)
+			const blocks = payload.attachments[0].blocks
+			const context = blocks[blocks.length - 1]
+			expect(context.type).toBe('context')
+			expect(context.elements?.[0].text).toContain('Service: test-service')
+		})
+
+		it('includes context block in resolution phase', () => {
+			const alert = makeAlert({
+				aggregation: {
+					phase: 'resolution',
+					fingerprint: 'abc123',
+					count: 1,
+					suppressedSince: 0,
+					firstSeen: Date.now(),
+					lastSeen: Date.now(),
+					peakRate: 0,
+				},
+			})
+			const payload = formatSlackPayload(alert)
+			const blocks = payload.attachments[0].blocks
+			const context = blocks[blocks.length - 1]
+			expect(context.type).toBe('context')
+			expect(context.elements?.[0].text).toContain('Service: test-service')
 		})
 	})
 

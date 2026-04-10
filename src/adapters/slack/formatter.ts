@@ -39,6 +39,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 			: (SEVERITY_COLORS[alert.level] ?? SEVERITY_COLORS.info)
 
 	const badge = alert.environmentBadge
+	const blocks: SlackBlock[] = []
 
 	switch (phase) {
 		case 'onset': {
@@ -50,7 +51,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 			}
 			body = truncate(body, 3000)
 
-			const blocks: SlackBlock[] = [
+			blocks.push(
 				{
 					type: 'header',
 					text: { type: 'plain_text', text: title },
@@ -59,27 +60,16 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 					type: 'section',
 					text: { type: 'mrkdwn', text: body },
 				},
-			]
+			)
 
 			if (alert.options.fields) {
 				const fields = Object.entries(alert.options.fields).map(([key, value]) => ({
 					type: 'mrkdwn' as const,
-					text: `*${key}*\n${String(value)}`,
+					text: `*${key}:* ${String(value)}`,
 				}))
 				blocks.push({ type: 'section', fields })
 			}
-
-			blocks.push({
-				type: 'context',
-				elements: [
-					{
-						type: 'mrkdwn',
-						text: `Service: ${alert.serviceName} | ${new Date(alert.timestamp).toISOString()}`,
-					},
-				],
-			})
-
-			return { attachments: [{ color, blocks }] }
+			break
 		}
 
 		case 'ramp': {
@@ -88,7 +78,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 				150,
 			)
 
-			const blocks: SlackBlock[] = [
+			blocks.push(
 				{
 					type: 'header',
 					text: { type: 'plain_text', text: title },
@@ -97,9 +87,8 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 					type: 'section',
 					text: { type: 'mrkdwn', text: truncate(alert.message, 3000) },
 				},
-			]
-
-			return { attachments: [{ color, blocks }] }
+			)
+			break
 		}
 
 		case 'sustained': {
@@ -108,7 +97,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 				150,
 			)
 
-			const blocks: SlackBlock[] = [
+			blocks.push(
 				{
 					type: 'header',
 					text: { type: 'plain_text', text: title },
@@ -117,9 +106,8 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 					type: 'section',
 					text: { type: 'mrkdwn', text: truncate(alert.message, 3000) },
 				},
-			]
-
-			return { attachments: [{ color, blocks }] }
+			)
+			break
 		}
 
 		case 'resolution': {
@@ -129,14 +117,23 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 				150,
 			)
 
-			const blocks: SlackBlock[] = [
-				{
-					type: 'header',
-					text: { type: 'plain_text', text: title },
-				},
-			]
-
-			return { attachments: [{ color, blocks }] }
+			blocks.push({
+				type: 'header',
+				text: { type: 'plain_text', text: title },
+			})
+			break
 		}
 	}
+
+	blocks.push({
+		type: 'context',
+		elements: [
+			{
+				type: 'mrkdwn',
+				text: `Service: ${alert.serviceName} | ${new Date(alert.timestamp).toISOString()}`,
+			},
+		],
+	})
+
+	return { attachments: [{ color, blocks }] }
 }

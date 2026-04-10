@@ -36,7 +36,7 @@ export class TelegramAdapter implements AlertAdapter {
     const { topicId, mentions } = this.resolve(alert.level, alert.options.tags)
 
     if (mentions.length > 0) {
-      text = `${mentions.join(' ')}\n${text}`
+      text = `${mentions.join(' ')}\n\n${text}`
     }
 
     const body: Record<string, unknown> = {

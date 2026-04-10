@@ -156,11 +156,11 @@ describe('formatTelegramMessage', () => {
   })
 
   describe('severity emojis', () => {
-    it('uses green circle for info', () => {
+    it('uses blue circle for info', () => {
       const alert = makeAlert({ level: 'info' })
       const msg = formatTelegramMessage(alert)
 
-      expect(msg).toContain('🟢')
+      expect(msg).toContain('\ud83d\udd35')
     })
 
     it('uses warning sign for warning', () => {
