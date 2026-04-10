@@ -11,7 +11,7 @@ Stop drowning in alert storms. `@iqai/alert-logger` groups repeated errors using
 - **Resolution detection** — get a "resolved" message when an error stops occurring
 - **Error fingerprinting** — same bug from different requests groups automatically (strips IDs, timestamps, UUIDs)
 - **Multi-channel routing** — route by severity level or custom tags to different channels
-- **Adapter architecture** — Discord and Console built-in; Sentry, Slack, Telegram as separate packages; or build your own
+- **Adapter architecture** — Discord, Slack, Telegram, and Console built-in; or build your own
 - **NestJS integration** — drop-in `@Global()` module with automatic exception filter
 - **NextJS integration** — `instrumentation.ts` hook with automatic `onRequestError` handler
 - **Per-environment config** — different suppression thresholds, levels, and ping rules for prod/staging/dev
@@ -35,16 +35,29 @@ yarn add @iqai/alert-logger
 ### Standalone (any Node.js project)
 
 ```ts
-import { AlertLogger, DiscordAdapter } from '@iqai/alert-logger'
+import { AlertLogger, DiscordAdapter, SlackAdapter, TelegramAdapter } from '@iqai/alert-logger'
 
 const logger = AlertLogger.init({
   adapters: [
-    new DiscordAdapter({ webhookUrl: process.env.DISCORD_WEBHOOK_URL }),
+    new DiscordAdapter({
+      webhookUrl: process.env.DISCORD_WEBHOOK_URL,
+      channels: { critical: process.env.DISCORD_ONCALL_WEBHOOK },
+      mentions: { critical: ['<@&oncall-role>'] },
+    }),
+    new SlackAdapter({
+      webhookUrl: process.env.SLACK_WEBHOOK_URL,
+      mentions: { critical: ['<@U0123ONCALL>'] },
+    }),
+    new TelegramAdapter({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID,
+      topics: { critical: 42, warning: 43, info: 44 },
+    }),
   ],
   serviceName: 'my-service',
 })
 
-// Simple error — goes to Discord with full context
+// Simple error — goes to all adapters with full context
 logger.error('Payment failed', error)
 
 // With metadata
@@ -156,17 +169,14 @@ AlertLogger.init({
   environments: {
     production: {
       levels: ['warning', 'critical'],
-      pings: { critical: ['@here'] },
       aggregation: { digestIntervalMs: 5 * 60_000 },
     },
     staging: {
       levels: ['critical'],           // only errors, no warnings
-      pings: {},                       // never ping anyone
       aggregation: { digestIntervalMs: 15 * 60_000 },
     },
     development: {
       levels: ['critical'],
-      pings: {},
       aggregation: { rampThreshold: 8, digestIntervalMs: 30 * 60_000 },
     },
   },
@@ -177,25 +187,54 @@ Every alert is prefixed with an environment badge (`[PROD]`, `[STG]`, `[DEV]`) s
 
 ## 📡 Multi-Channel Routing
 
-Route alerts to different webhooks by severity or tags:
+Each adapter owns its routing. Route alerts to different channels/topics by severity or tags:
 
 ```ts
 AlertLogger.init({
-  adapters: [new DiscordAdapter({ webhookUrl: DEFAULT_WEBHOOK })],
-  routing: {
-    channels: {
-      info: process.env.DISCORD_INFO_WEBHOOK,
-      warning: process.env.DISCORD_WARNINGS_WEBHOOK,
-      critical: process.env.DISCORD_ONCALL_WEBHOOK,
-    },
-    tags: {
-      indexer: process.env.DISCORD_INDEXER_WEBHOOK,
-      relayer: process.env.DISCORD_RELAYER_WEBHOOK,
-    },
-    pings: {
-      critical: ['@here'],
-    },
-  },
+  adapters: [
+    // Discord: route by level to different webhook URLs
+    new DiscordAdapter({
+      webhookUrl: process.env.DISCORD_DEFAULT_WEBHOOK,
+      channels: {
+        critical: process.env.DISCORD_ONCALL_WEBHOOK,
+        warning: process.env.DISCORD_WARNINGS_WEBHOOK,
+      },
+      tags: {
+        indexer: process.env.DISCORD_INDEXER_WEBHOOK,
+      },
+      mentions: {
+        critical: ['<@&oncall-role>'],
+      },
+    }),
+
+    // Slack: same pattern with Incoming Webhook URLs
+    new SlackAdapter({
+      webhookUrl: process.env.SLACK_DEFAULT_WEBHOOK,
+      channels: {
+        critical: process.env.SLACK_ONCALL_WEBHOOK,
+      },
+      mentions: {
+        critical: ['<@U0123ONCALL>'],
+      },
+    }),
+
+    // Telegram: route by level to forum topics
+    new TelegramAdapter({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID,
+      topics: {
+        critical: 42,
+        warning: 43,
+        info: 44,
+      },
+      tags: {
+        indexer: 99,
+      },
+      mentions: {
+        critical: ['@oncall_dev'],
+      },
+    }),
+  ],
 })
 ```
 
@@ -224,8 +263,15 @@ class PagerDutyAdapter implements AlertAdapter {
 
 ```ts
 AlertLogger.init({
-  // Required
-  adapters: [new DiscordAdapter({ webhookUrl: '...' })],
+  // Required — each adapter configures its own routing
+  adapters: [
+    new DiscordAdapter({
+      webhookUrl: '...',
+      channels: {},                // level → webhook URL
+      tags: {},                    // tag → webhook URL
+      mentions: {},                // level → mention strings
+    }),
+  ],
 
   // Identity
   serviceName: 'backend',         // defaults to hostname
@@ -238,17 +284,10 @@ AlertLogger.init({
     resolutionCooldownMs: 2 * 60_000, // silence before "resolved"
   },
 
-  // Routing
-  routing: {
-    channels: {},                  // level → webhook URL
-    tags: {},                      // tag → webhook URL
-    pings: {},                     // level → mention strings
-  },
-
   // Per-environment overrides
   environments: {
-    production: { levels: ['warning', 'critical'], pings: { critical: ['@here'] } },
-    staging: { levels: ['critical'], pings: {} },
+    production: { levels: ['warning', 'critical'] },
+    staging: { levels: ['critical'] },
     development: { levels: ['critical'], aggregation: { rampThreshold: 8 } },
   },
 
@@ -271,10 +310,10 @@ AlertLogger.init({
 | Adapter | Package | Status |
 |---------|---------|--------|
 | Discord | `@iqai/alert-logger` (built-in) | Available |
+| Slack | `@iqai/alert-logger` (built-in) | Available |
+| Telegram | `@iqai/alert-logger` (built-in) | Available |
 | Console | `@iqai/alert-logger` (built-in) | Available |
 | Sentry | `@iqai/alert-logger-sentry` | Planned |
-| Slack | `@iqai/alert-logger-slack` | Planned |
-| Telegram | `@iqai/alert-logger-telegram` | Planned |
 
 ## 🤝 Contributing
 
