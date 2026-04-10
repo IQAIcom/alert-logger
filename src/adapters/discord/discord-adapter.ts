@@ -3,6 +3,9 @@ import { formatDiscordEmbed } from './formatter.js'
 
 export interface DiscordAdapterOptions {
   webhookUrl: string
+  channels?: Partial<Record<AlertLevel, string>>
+  tags?: Record<string, string>
+  mentions?: Partial<Record<AlertLevel, string[]>>
 }
 
 export class DiscordAdapter implements AlertAdapter {
@@ -10,9 +13,15 @@ export class DiscordAdapter implements AlertAdapter {
   levels: AlertLevel[] = ['info', 'warning', 'critical']
 
   private readonly webhookUrl: string
+  private readonly channels: Partial<Record<AlertLevel, string>>
+  private readonly tags: Record<string, string>
+  private readonly mentions: Partial<Record<AlertLevel, string[]>>
 
   constructor(options: DiscordAdapterOptions) {
     this.webhookUrl = options.webhookUrl
+    this.channels = options.channels ?? {}
+    this.tags = options.tags ?? {}
+    this.mentions = options.mentions ?? {}
   }
 
   rateLimits() {
@@ -21,19 +30,38 @@ export class DiscordAdapter implements AlertAdapter {
 
   async send(alert: FormattedAlert): Promise<void> {
     const embed = formatDiscordEmbed(alert)
-    const webhookUrl = alert.webhookUrl ?? this.webhookUrl
+    const { url, mentions } = this.resolve(alert.level, alert.options.tags)
 
     const payload: Record<string, unknown> = { embeds: [embed] }
 
-    if (alert.pings.length > 0) {
-      payload.content = alert.pings.join(' ')
+    if (mentions.length > 0) {
+      payload.content = mentions.join(' ')
     }
 
-    await this.postWebhook(webhookUrl, payload)
+    await this.postWebhook(url, payload)
   }
 
   async healthy(): Promise<boolean> {
     return true
+  }
+
+  private resolve(
+    level: AlertLevel,
+    tags?: string[],
+  ): { url: string; mentions: string[] } {
+    const mentions = this.mentions[level] ?? []
+
+    if (tags?.length) {
+      for (const tag of tags) {
+        const url = this.tags[tag]
+        if (url) return { url, mentions }
+      }
+    }
+
+    const levelUrl = this.channels[level]
+    if (levelUrl) return { url: levelUrl, mentions }
+
+    return { url: this.webhookUrl, mentions }
   }
 
   private async postWebhook(

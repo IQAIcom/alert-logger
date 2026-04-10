@@ -23,5 +23,4 @@ export type {
   NormalizerRule,
   QueueConfig,
   ResolvedConfig,
-  RoutingConfig,
 } from './core/types.js'

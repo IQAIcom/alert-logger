@@ -20,7 +20,6 @@ function makeEntry(id: number): QueueEntry {
         lastSeen: Date.now(),
         peakRate: 0,
       },
-      pings: [],
       environmentBadge: '[TEST]',
     } as FormattedAlert,
     enqueuedAt: Date.now(),

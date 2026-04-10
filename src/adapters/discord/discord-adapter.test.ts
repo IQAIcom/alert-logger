@@ -20,7 +20,6 @@ function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
       lastSeen: Date.now(),
       peakRate: 0,
     },
-    pings: [],
     environmentBadge: '[PROD]',
     ...overrides,
   }
@@ -57,29 +56,63 @@ describe('DiscordAdapter', () => {
     const body = JSON.parse(options.body)
     expect(body.embeds).toBeDefined()
     expect(body.embeds).toHaveLength(1)
-    // No pings, so content should be absent
+    // No mentions configured, so content should be absent
     expect(body.content).toBeUndefined()
   })
 
-  it('send() uses alert.webhookUrl override when present', async () => {
+  it('send() routes to level-specific channel', async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
 
-    const overrideUrl = 'https://discord.com/api/webhooks/999/override'
-    const alert = makeAlert({ webhookUrl: overrideUrl })
-    await adapter.send(alert)
+    const criticalUrl = 'https://discord.com/api/webhooks/999/critical'
+    adapter = new DiscordAdapter({
+      webhookUrl: WEBHOOK_URL,
+      channels: { critical: criticalUrl },
+    })
+    await adapter.send(makeAlert({ level: 'critical' }))
 
     const [url] = mockFetch.mock.calls[0]
-    expect(url).toBe(overrideUrl)
+    expect(url).toBe(criticalUrl)
   })
 
-  it('send() includes pings as content field', async () => {
+  it('send() routes to tag-specific channel with priority over level', async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
 
-    const alert = makeAlert({ pings: ['<@123>', '<@456>'] })
-    await adapter.send(alert)
+    const paymentsUrl = 'https://discord.com/api/webhooks/999/payments'
+    adapter = new DiscordAdapter({
+      webhookUrl: WEBHOOK_URL,
+      channels: { critical: 'https://discord.com/api/webhooks/999/critical' },
+      tags: { payments: paymentsUrl },
+    })
+    await adapter.send(makeAlert({ level: 'critical', options: { tags: ['payments'] } }))
+
+    const [url] = mockFetch.mock.calls[0]
+    expect(url).toBe(paymentsUrl)
+  })
+
+  it('send() includes mentions as content field', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
+
+    adapter = new DiscordAdapter({
+      webhookUrl: WEBHOOK_URL,
+      mentions: { critical: ['<@123>', '<@&456>'] },
+    })
+    await adapter.send(makeAlert({ level: 'critical' }))
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.content).toBe('<@123> <@456>')
+    expect(body.content).toBe('<@123> <@&456>')
+  })
+
+  it('send() omits content when no mentions for level', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
+
+    adapter = new DiscordAdapter({
+      webhookUrl: WEBHOOK_URL,
+      mentions: { critical: ['<@123>'] },
+    })
+    await adapter.send(makeAlert({ level: 'info' }))
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.content).toBeUndefined()
   })
 
   it('send() retries on 429 with Retry-After header', async () => {
