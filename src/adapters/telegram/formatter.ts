@@ -11,10 +11,7 @@ const RESOLUTION_EMOJI = '\u2705'
 const MAX_MESSAGE_LENGTH = 4096
 
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 function truncate(text: string, max: number): string {
@@ -51,26 +48,35 @@ export function formatTelegramMessage(alert: FormattedAlert): string {
 
     case 'ramp': {
       const emoji = SEVERITY_EMOJI[alert.level] ?? SEVERITY_EMOJI.info
-      parts.push(`${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.count} \u2014 ${aggregation.suppressedSince} suppressed since last)</b>`)
+      parts.push(
+        `${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.count} \u2014 ${aggregation.suppressedSince} suppressed since last)</b>`,
+      )
       parts.push('', safeMessage)
       break
     }
 
     case 'sustained': {
       const emoji = SEVERITY_EMOJI[alert.level] ?? SEVERITY_EMOJI.info
-      parts.push(`${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.count} \u00B7 peak: ${aggregation.peakRate.toFixed(1)}/s)</b>`)
+      parts.push(
+        `${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.count} \u00B7 peak: ${aggregation.peakRate.toFixed(1)}/s)</b>`,
+      )
       parts.push('', safeMessage)
       break
     }
 
     case 'resolution': {
       const totalDuration = formatDuration(aggregation.lastSeen - aggregation.firstSeen)
-      parts.push(`${RESOLUTION_EMOJI} <b>Resolved: ${safeTitle} \u2014 ${aggregation.count} total over ${totalDuration}</b>`)
+      parts.push(
+        `${RESOLUTION_EMOJI} <b>Resolved: ${safeTitle} \u2014 ${aggregation.count} total over ${totalDuration}</b>`,
+      )
       break
     }
   }
 
-  parts.push('', `<i>Service: ${escapeHtml(alert.serviceName)} | ${new Date(alert.timestamp).toISOString()}</i>`)
+  parts.push(
+    '',
+    `<i>Service: ${escapeHtml(alert.serviceName)} | ${new Date(alert.timestamp).toISOString()}</i>`,
+  )
 
   return truncate(parts.join('\n'), MAX_MESSAGE_LENGTH)
 }

@@ -45,10 +45,7 @@ export class DiscordAdapter implements AlertAdapter {
     return true
   }
 
-  private resolve(
-    level: AlertLevel,
-    tags?: string[],
-  ): { url: string; mentions: string[] } {
+  private resolve(level: AlertLevel, tags?: string[]): { url: string; mentions: string[] } {
     const mentions = this.mentions[level] ?? []
 
     if (tags?.length) {

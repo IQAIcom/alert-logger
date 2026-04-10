@@ -134,7 +134,9 @@ describe('TelegramAdapter', () => {
     mockFetch.mockResolvedValueOnce(new Response(errorBody, { status: 400 }))
 
     const alert = makeAlert()
-    await expect(adapter.send(alert)).rejects.toThrow('Telegram API error: Bad Request: chat not found')
+    await expect(adapter.send(alert)).rejects.toThrow(
+      'Telegram API error: Bad Request: chat not found',
+    )
   })
 
   it('rateLimits() returns 20/60s', () => {

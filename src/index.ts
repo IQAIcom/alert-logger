@@ -1,5 +1,4 @@
 // Core
-export { AlertLogger } from './core/alert-logger.js'
 
 // Adapters
 export type { ConsoleAdapterOptions } from './adapters/console/console-adapter.js'
@@ -10,6 +9,7 @@ export type { SlackAdapterOptions } from './adapters/slack/slack-adapter.js'
 export { SlackAdapter } from './adapters/slack/slack-adapter.js'
 export type { TelegramAdapterOptions } from './adapters/telegram/telegram-adapter.js'
 export { TelegramAdapter } from './adapters/telegram/telegram-adapter.js'
+export { AlertLogger } from './core/alert-logger.js'
 // Types
 export type {
   AggregationConfig,
