@@ -43,7 +43,6 @@ function createAlert(overrides?: Partial<FormattedAlert>): FormattedAlert {
       lastSeen: Date.now(),
       peakRate: 0,
     },
-    pings: [],
     environmentBadge: '[TEST]',
     ...overrides,
   }

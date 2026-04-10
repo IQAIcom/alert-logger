@@ -29,7 +29,6 @@ function makeEntry(overrides?: Partial<QueueEntry>): QueueEntry {
       lastSeen: Date.now(),
       peakRate: 1,
     },
-    pings: [],
     environmentBadge: '[PROD]',
   }
 

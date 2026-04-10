@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.0.0
+
+### Major Changes
+
+- [#16](https://github.com/IQAIcom/alert-logger/pull/16) [`bc50c1a`](https://github.com/IQAIcom/alert-logger/commit/bc50c1aaf4660872db6d81b3726b732d25e87794) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add Slack and Telegram adapters with adapter-owned routing
+
+  **Breaking changes:**
+
+  - Removed `RoutingConfig` type, `Router` class, and `routing` option from `AlertLoggerConfig`
+  - Removed `webhookUrl` and `pings` from `FormattedAlert`
+  - Removed `pings` from `EnvironmentConfig`
+  - Routing is now configured per-adapter via `channels`, `tags`, and `mentions` constructor options
+
+  **Migration:** Move `routing.channels`, `routing.tags`, and `routing.pings` into your adapter constructor:
+
+  ```ts
+  // Before
+  AlertLogger.init({
+    adapters: [new DiscordAdapter({ webhookUrl: "..." })],
+    routing: {
+      channels: { critical: "..." },
+      pings: { critical: ["<@&role>"] },
+    },
+  });
+
+  // After
+  AlertLogger.init({
+    adapters: [
+      new DiscordAdapter({
+        webhookUrl: "...",
+        channels: { critical: "..." },
+        mentions: { critical: ["<@&role>"] },
+      }),
+    ],
+  });
+  ```
+
+  **New features:**
+
+  - `SlackAdapter` — Incoming Webhooks with Block Kit formatting, per-level channel routing, mention support, mrkdwn sanitization
+  - `TelegramAdapter` — Bot API with HTML formatting, per-level forum topic routing, tag-to-topic mapping, @username mentions, safe HTML truncation
+
+## 0.4.1
+
+### Patch Changes
+
+- [#13](https://github.com/IQAIcom/alert-logger/pull/13) [`417688e`](https://github.com/IQAIcom/alert-logger/commit/417688e9ec62ac8540a88aa3e559e7648f3195dd) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix: improve default fingerprint aggregation to reduce alert noise
+
+  - Normalize titles with the same rules used for messages (UUIDs, hex addresses, timestamps, numbers) so dynamic values in titles don't split fingerprints.
+  - Reduce default `stackDepth` from 3 to 1 so the same error from different callers groups into a single aggregation stream. Users can restore the previous behavior with `fingerprint: { stackDepth: 3 }`.
+
 ## 0.4.0
 
 ### Minor Changes

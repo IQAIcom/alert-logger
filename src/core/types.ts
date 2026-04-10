@@ -33,8 +33,6 @@ export interface AggregationMeta {
 
 export interface FormattedAlert extends Alert {
   aggregation: AggregationMeta
-  webhookUrl?: string
-  pings: string[]
   environmentBadge: string
 }
 
@@ -56,12 +54,6 @@ export interface AggregationConfig {
   rampThreshold: number
   digestIntervalMs: number
   resolutionCooldownMs: number
-}
-
-export interface RoutingConfig {
-  channels?: Partial<Record<AlertLevel, string>>
-  tags?: Record<string, string>
-  pings?: Partial<Record<AlertLevel, string[]>>
 }
 
 export interface HealthPolicy {
@@ -89,7 +81,6 @@ export interface FingerprintConfig {
 
 export interface EnvironmentConfig {
   levels?: AlertLevel[]
-  pings?: Partial<Record<AlertLevel, string[]>>
   aggregation?: Partial<AggregationConfig>
 }
 
@@ -98,7 +89,6 @@ export interface AlertLoggerConfig {
   serviceName?: string
   environment?: string
   aggregation?: Partial<AggregationConfig>
-  routing?: RoutingConfig
   environments?: Record<string, EnvironmentConfig>
   queue?: Partial<QueueConfig>
   health?: Partial<HealthPolicy>
@@ -110,12 +100,10 @@ export interface ResolvedConfig {
   serviceName: string
   environment: string
   aggregation: AggregationConfig
-  routing: RoutingConfig
   queue: QueueConfig
   health: HealthPolicy
   fingerprint: FingerprintConfig
   levels: AlertLevel[]
-  pings: Partial<Record<AlertLevel, string[]>>
   environmentBadge: string
 }
 
@@ -159,11 +147,6 @@ export function resolveConfig(config: AlertLoggerConfig): ResolvedConfig {
     ...envOverride?.aggregation,
   }
 
-  const pings: Partial<Record<AlertLevel, string[]>> = {
-    ...config.routing?.pings,
-    ...envOverride?.pings,
-  }
-
   const levels: AlertLevel[] = envOverride?.levels ?? ['info', 'warning', 'critical']
 
   return {
@@ -171,12 +154,10 @@ export function resolveConfig(config: AlertLoggerConfig): ResolvedConfig {
     serviceName: config.serviceName ?? 'unknown',
     environment,
     aggregation,
-    routing: config.routing ?? {},
     queue: { ...DEFAULT_QUEUE, ...config.queue },
     health: { ...DEFAULT_HEALTH, ...config.health },
     fingerprint: { ...DEFAULT_FINGERPRINT, ...config.fingerprint },
     levels,
-    pings,
     environmentBadge: BADGE_MAP[environment] ?? `[${environment.toUpperCase()}]`,
   }
 }
