@@ -32,6 +32,12 @@ describe('fingerprint', () => {
       expect(a).toBe(b)
     })
 
+    it('strips numbers adjacent to unit letters (e.g. 330s, 120ms)', () => {
+      const a = fingerprint('E', 'No block processed for 330s (threshold: 120s)', undefined, cfg)
+      const b = fingerprint('E', 'No block processed for 360s (threshold: 120s)', undefined, cfg)
+      expect(a).toBe(b)
+    })
+
     it('strips multiple patterns in one message', () => {
       const a = fingerprint(
         'E',

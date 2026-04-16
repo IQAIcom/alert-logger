@@ -4,7 +4,7 @@ import type { FingerprintConfig, NormalizerRule } from './types.js'
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
 const HEX_RE = /0x[a-fA-F0-9]{6,}/g
 const ISO_TIMESTAMP_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/g
-const NUMBER_RE = /\b\d+\b/g
+const NUMBER_RE = /\d+/g
 
 const BUILTIN_NORMALIZERS: NormalizerRule[] = [
   { pattern: UUID_RE, replacement: '<uuid>' },
