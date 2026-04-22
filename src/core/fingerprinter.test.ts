@@ -118,7 +118,7 @@ describe('fingerprint', () => {
   // ── Custom normalizers ──────────────────────────────────────────────
 
   describe('custom normalizers', () => {
-    it('applies user-defined normalizers before builtins', () => {
+    it('applies user-defined normalizers on top of builtins', () => {
       const custom: FingerprintConfig = {
         stackDepth: 3,
         normalizers: [{ pattern: /order-\w+/g, replacement: '<order>' }],
@@ -128,16 +128,48 @@ describe('fingerprint', () => {
       expect(a).toBe(b)
     })
 
-    it('user normalizers run before builtins so they can match raw text', () => {
+    it('does not let broad user rules break built-in UUID normalization', () => {
+      // A user-supplied `/\d+/g` rule used to run before built-ins and strip
+      // digits out of UUIDs, leaving distinct strings where a UUID should
+      // have collapsed to "<uuid>". Built-ins now run first, so structural
+      // identifiers survive.
       const custom: FingerprintConfig = {
         stackDepth: 3,
-        normalizers: [{ pattern: /ID:\d+/g, replacement: '<id>' }],
+        normalizers: [{ pattern: /\d+/g, replacement: '<num>' }],
       }
-      // The user normalizer matches "ID:42" before the builtin number normalizer
-      // could turn "42" into "<num>"
-      const hash = fingerprint('E', 'lookup ID:42', undefined, custom)
-      const hashWithDifferentId = fingerprint('E', 'lookup ID:99', undefined, custom)
-      expect(hash).toBe(hashWithDifferentId)
+      const a = fingerprint(
+        'E',
+        'Trade a51c80e4-3307-4d5f-a035-03c8fd1f767d permanently failed',
+        undefined,
+        custom,
+      )
+      const b = fingerprint(
+        'E',
+        'Trade 1bbc368f-a1fa-44af-9d04-ffaa804a30b1 permanently failed',
+        undefined,
+        custom,
+      )
+      expect(a).toBe(b)
+    })
+
+    it('does not let broad user rules break built-in hex normalization', () => {
+      const custom: FingerprintConfig = {
+        stackDepth: 3,
+        normalizers: [{ pattern: /\d+/g, replacement: '<num>' }],
+      }
+      const a = fingerprint(
+        'E',
+        'safeTxHash=0x9db6e277fdea4e17ef1597e358d7bd893d257cf62378180a9d279fdeb1d0ab58',
+        undefined,
+        custom,
+      )
+      const b = fingerprint(
+        'E',
+        'safeTxHash=0xf51b9f89c5919f9efffd9eb2450251bf668ec8410aa5c599c267027fc92b8466',
+        undefined,
+        custom,
+      )
+      expect(a).toBe(b)
     })
   })
 

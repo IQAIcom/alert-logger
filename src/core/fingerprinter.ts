@@ -16,13 +16,16 @@ const BUILTIN_NORMALIZERS: NormalizerRule[] = [
 function normalizeMessage(message: string, userNormalizers: NormalizerRule[]): string {
   let result = message
 
-  // Apply user-defined normalizers first
-  for (const rule of userNormalizers) {
+  // Apply built-in normalizers first so structural identifiers (UUIDs, hex
+  // addresses, timestamps, numbers) are collapsed before user rules run.
+  // Running user rules first lets a broad pattern like `/\d+/g` strip digits
+  // out of UUIDs/hex, which prevents the structural regexes from matching
+  // and turns every ID into its own fingerprint.
+  for (const rule of BUILTIN_NORMALIZERS) {
     result = result.replace(rule.pattern, rule.replacement)
   }
 
-  // Then apply built-in normalizers
-  for (const rule of BUILTIN_NORMALIZERS) {
+  for (const rule of userNormalizers) {
     result = result.replace(rule.pattern, rule.replacement)
   }
 
