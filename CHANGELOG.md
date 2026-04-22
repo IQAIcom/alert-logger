@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.0.1
+
+### Patch Changes
+
+- [`942e36f`](https://github.com/IQAIcom/alert-logger/commit/942e36fc5351232fc91f87dc57003a73a2326514) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix(fingerprinter): normalize numbers adjacent to unit letters
+
+  The built-in `NUMBER_RE` used `\b\d+\b`, which failed to match digits
+  immediately followed by word characters (e.g. `330s`, `120ms`). Messages
+  like `"No block processed for 330s"` and `"... for 360s"` produced
+  different fingerprints, so aggregation treated each tick as a fresh
+  onset and no suppression occurred. Loosened to `\d+` so duration/size
+  suffixes are collapsed too.
+
+- [#20](https://github.com/IQAIcom/alert-logger/pull/20) [`3239f66`](https://github.com/IQAIcom/alert-logger/commit/3239f665ad30c04204adbefa12c06a76123464f9) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix(fingerprinter): run built-in normalizers before user-defined ones
+
+  User-defined normalizers previously ran before the built-in ones, so a
+  broad rule like `{ pattern: /\d+/g, replacement: "<num>" }` would strip
+  digits out of UUIDs and hex addresses before `UUID_RE` and `HEX_RE` had a
+  chance to match. Every trade ID or transaction hash then produced a
+  distinct fingerprint, which made the aggregator treat each occurrence as
+  a fresh onset and suppression never kicked in.
+
+  Built-ins now collapse structural identifiers first, and user rules
+  compose on top of the normalized output.
+
 ## 1.0.0
 
 ### Major Changes
