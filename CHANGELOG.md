@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0
+
+### Minor Changes
+
+- [#21](https://github.com/IQAIcom/alert-logger/pull/21) [`3633fee`](https://github.com/IQAIcom/alert-logger/commit/3633fee337b1b42275e63e10dfad01d49257a639) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Make sustained alerting quieter and more informative by:
+
+  - adding rate-aware early handoff from ramp to sustained mode
+  - changing the default sustained update interval from 5 minutes to 15 minutes
+  - adding `aggregation.periodCount` for per-update deltas while keeping `suppressedSince` for compatibility
+  - exposing `aggregation.rampExitRatePerSecond` and `aggregation.rampExitRateWindowMs` configuration knobs
+  - updating sustained formatter output to show both per-period and total counts
+
 ## 1.0.1
 
 ### Patch Changes
