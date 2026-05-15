@@ -105,7 +105,7 @@ export function formatSlackPayload(alert: FormattedAlert): SlackPayload {
 
     case 'sustained': {
       const title = truncate(
-        `${badge} [${alert.level.toUpperCase()}] ${alert.title} (x${aggregation.count} \u00B7 peak: ${aggregation.peakRate.toFixed(1)}/s)`,
+        `${badge} [${alert.level.toUpperCase()}] ${alert.title} (x${aggregation.periodCount} since last update \u00B7 x${aggregation.count} total \u00B7 peak: ${aggregation.peakRate.toFixed(1)}/s)`,
         150,
       )
 

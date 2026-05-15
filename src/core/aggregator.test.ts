@@ -22,6 +22,7 @@ describe('Aggregator', () => {
       expect(result.shouldSend).toBe(true)
       expect(result.phase).toBe('onset')
       expect(result.count).toBe(1)
+      expect(result.periodCount).toBe(0)
       expect(result.fingerprint).toBe('err-1')
       expect(result.suppressedSince).toBe(0)
     })
@@ -37,16 +38,22 @@ describe('Aggregator', () => {
 
   describe('ramp phase', () => {
     it('sends at power-of-2 counts (2, 4, 8, 16, 32, 64)', () => {
+      const agg = new Aggregator({
+        ...DEFAULT_AGGREGATION,
+        rampExitRatePerSecond: Number.POSITIVE_INFINITY,
+      })
       const powerOfTwoCounts = [2, 4, 8, 16, 32, 64]
 
       for (let i = 1; i <= 64; i++) {
-        const result = aggregator.process('err-ramp')
+        const result = agg.process('err-ramp')
         if (powerOfTwoCounts.includes(i)) {
           expect(result.shouldSend).toBe(true)
           expect(result.phase).toBe('ramp')
           expect(result.count).toBe(i)
         }
       }
+
+      agg.destroy()
     })
 
     it('suppresses non-power-of-2 counts', () => {
@@ -71,6 +78,7 @@ describe('Aggregator', () => {
       expect(result2.phase).toBe('ramp')
       expect(result2.shouldSend).toBe(true)
       expect(result2.count).toBe(2)
+      expect(result2.periodCount).toBe(1)
     })
   })
 
@@ -91,16 +99,51 @@ describe('Aggregator', () => {
       expect(result.count).toBe(65)
     })
 
+    it('enters sustained early after one ramp alert when rate threshold is exceeded', () => {
+      const config: AggregationConfig = {
+        rampThreshold: 64,
+        rampExitRatePerSecond: 0.6,
+        rampExitRateWindowMs: 60_000,
+        digestIntervalMs: 15 * 60_000,
+        resolutionCooldownMs: 5000,
+      }
+      const agg = new Aggregator(config)
+
+      agg.process('err-rate') // onset
+      const ramp = agg.process('err-rate') // count=2, first ramp alert
+      expect(ramp.phase).toBe('ramp')
+
+      let sustained: ReturnType<typeof agg.process> | undefined
+      for (let i = 0; i < 34; i++) {
+        const result = agg.process('err-rate')
+        if (result.shouldSend && result.phase === 'sustained') {
+          sustained = result
+          break
+        }
+      }
+
+      expect(sustained).toBeDefined()
+      const sustainedResult = sustained!
+      expect(sustainedResult.shouldSend).toBe(true)
+      expect(sustainedResult.phase).toBe('sustained')
+      expect(sustainedResult.count).toBeLessThan(config.rampThreshold)
+      expect(sustainedResult.periodCount).toBe(4)
+      expect(sustainedResult.suppressedSince).toBe(4)
+
+      agg.destroy()
+    })
+
     it('sends digest when digestIntervalMs has elapsed', () => {
       // Get past ramp phase
       processNTimes('err-digest', 65)
 
-      // Advance time past digestIntervalMs (default 5 minutes)
+      // Advance time past digestIntervalMs
       vi.advanceTimersByTime(DEFAULT_AGGREGATION.digestIntervalMs)
 
       const result = aggregator.process('err-digest')
       expect(result.shouldSend).toBe(true)
       expect(result.phase).toBe('sustained')
+      expect(result.periodCount).toBe(2)
     })
 
     it('suppresses when digestIntervalMs has not elapsed', () => {
@@ -135,6 +178,8 @@ describe('Aggregator', () => {
     it('reports correct suppressed count in sustained phase', () => {
       const config: AggregationConfig = {
         rampThreshold: 4,
+        rampExitRatePerSecond: Number.POSITIVE_INFINITY,
+        rampExitRateWindowMs: 60_000,
         digestIntervalMs: 1000,
         resolutionCooldownMs: 5000,
       }
@@ -158,6 +203,7 @@ describe('Aggregator', () => {
       const result = agg.process('fp')
       expect(result.shouldSend).toBe(true)
       expect(result.phase).toBe('sustained')
+      expect(result.periodCount).toBe(4)
       expect(result.suppressedSince).toBe(4)
 
       agg.destroy()
@@ -165,6 +211,7 @@ describe('Aggregator', () => {
 
     it('reports zero suppressedSince on onset', () => {
       const result = aggregator.process('fp-zero')
+      expect(result.periodCount).toBe(0)
       expect(result.suppressedSince).toBe(0)
     })
   })
@@ -184,6 +231,31 @@ describe('Aggregator', () => {
 
       const resolved = aggregator.checkResolutions()
       expect(resolved).toHaveLength(0)
+    })
+
+    it('resolves alerts that entered sustained via rate-based early exit', () => {
+      const config: AggregationConfig = {
+        rampThreshold: 64,
+        rampExitRatePerSecond: 0.5,
+        rampExitRateWindowMs: 60_000,
+        digestIntervalMs: 15 * 60_000,
+        resolutionCooldownMs: 5000,
+      }
+      const agg = new Aggregator(config)
+
+      agg.process('err-rate-resolve')
+      agg.process('err-rate-resolve')
+      for (let i = 0; i < 29; i++) {
+        agg.process('err-rate-resolve')
+      }
+
+      vi.advanceTimersByTime(5001)
+
+      const resolved = agg.checkResolutions()
+      expect(resolved).toHaveLength(1)
+      expect(resolved[0].fingerprint).toBe('err-rate-resolve')
+
+      agg.destroy()
     })
 
     it('resolves alerts that exceeded rampThreshold (sustained crisis)', () => {

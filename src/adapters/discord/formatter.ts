@@ -94,7 +94,7 @@ export function formatDiscordEmbed(alert: FormattedAlert): DiscordEmbed {
 
     case 'sustained': {
       const title = truncate(
-        `${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.count} in last digest period \u00B7 peak rate: ${aggregation.peakRate.toFixed(1)}/s)`,
+        `${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.periodCount} since last update \u00B7 x${aggregation.count} total \u00B7 peak rate: ${aggregation.peakRate.toFixed(1)}/s)`,
         256,
       )
 

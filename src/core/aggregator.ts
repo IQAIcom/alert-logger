@@ -5,6 +5,8 @@ export interface AggregationState {
   firstSeen: number
   lastSeen: number
   phase: AggregationPhase
+  everEnteredSustained: boolean
+  hasSentRampAlert: boolean
   peakRate: number
   lastAlertedAt: number
   lastAlertedCount: number
@@ -15,6 +17,7 @@ export interface AggregationResult {
   shouldSend: boolean
   phase: AggregationPhase
   count: number
+  periodCount: number
   suppressedSince: number
   firstSeen: number
   lastSeen: number
@@ -30,7 +33,6 @@ export interface ResolvedEntry {
   peakRate: number
 }
 
-const RATE_WINDOW_MS = 60_000
 const RESOLUTION_CHECK_INTERVAL_MS = 30_000
 const EVICTION_GRACE_MS = 5 * 60_000
 
@@ -57,6 +59,8 @@ export class Aggregator {
         firstSeen: now,
         lastSeen: now,
         phase: 'onset',
+        everEnteredSustained: false,
+        hasSentRampAlert: false,
         peakRate: 0,
         lastAlertedAt: 0,
         lastAlertedCount: 0,
@@ -70,9 +74,9 @@ export class Aggregator {
 
     // Update sliding rate window
     state.rateWindow.push(now)
-    const windowCutoff = now - RATE_WINDOW_MS
+    const windowCutoff = now - this.config.rampExitRateWindowMs
     state.rateWindow = state.rateWindow.filter((t) => t > windowCutoff)
-    const currentRate = state.rateWindow.length / (RATE_WINDOW_MS / 1000)
+    const currentRate = state.rateWindow.length / (this.config.rampExitRateWindowMs / 1000)
     if (currentRate > state.peakRate) {
       state.peakRate = currentRate
     }
@@ -81,6 +85,7 @@ export class Aggregator {
       shouldSend: false,
       phase: state.phase,
       count: state.count,
+      periodCount: 0,
       suppressedSince: 0,
       firstSeen: state.firstSeen,
       lastSeen: state.lastSeen,
@@ -98,29 +103,36 @@ export class Aggregator {
       return result
     }
 
-    // Phase: ramp (power-of-2 counts up to rampThreshold)
-    if (state.count <= this.config.rampThreshold && isPowerOfTwo(state.count)) {
-      state.phase = 'ramp'
-      result.shouldSend = true
-      result.phase = 'ramp'
-      result.suppressedSince = state.count - state.lastAlertedCount
-      state.lastAlertedAt = now
-      state.lastAlertedCount = state.count
-      return result
-    }
+    const shouldEnterSustainedByRate =
+      state.hasSentRampAlert && currentRate >= this.config.rampExitRatePerSecond
 
-    // Phase: sustained (count exceeds rampThreshold)
-    if (state.count > this.config.rampThreshold) {
+    if (state.count > this.config.rampThreshold || shouldEnterSustainedByRate) {
       state.phase = 'sustained'
+      state.everEnteredSustained = true
       result.phase = 'sustained'
 
-      if (now - state.lastAlertedAt >= this.config.digestIntervalMs) {
+      const sustainedByRate = shouldEnterSustainedByRate && state.count <= this.config.rampThreshold
+      if (sustainedByRate || now - state.lastAlertedAt >= this.config.digestIntervalMs) {
         result.shouldSend = true
-        result.suppressedSince = state.count - state.lastAlertedCount
+        result.periodCount = state.count - state.lastAlertedCount
+        result.suppressedSince = result.periodCount
         state.lastAlertedAt = now
         state.lastAlertedCount = state.count
       }
 
+      return result
+    }
+
+    // Phase: ramp (power-of-2 counts up to rampThreshold)
+    if (isPowerOfTwo(state.count)) {
+      state.phase = 'ramp'
+      result.shouldSend = true
+      result.phase = 'ramp'
+      result.periodCount = state.count - state.lastAlertedCount
+      result.suppressedSince = result.periodCount
+      state.lastAlertedAt = now
+      state.lastAlertedCount = state.count
+      state.hasSentRampAlert = true
       return result
     }
 
@@ -144,11 +156,8 @@ export class Aggregator {
       }
 
       if (now - state.lastSeen >= this.config.resolutionCooldownMs) {
-        // Only send resolution for alerts that reached the sustained phase
-        // (count > rampThreshold). A few sporadic failures aren't a "crisis"
-        // worth announcing as resolved — resolution is for ongoing incidents
-        // that generated a flood of alerts and then stopped.
-        if (state.count > this.config.rampThreshold) {
+        // Only send resolution for alerts that ever reached sustained mode.
+        if (state.everEnteredSustained) {
           resolved.push({
             fingerprint,
             count: state.count,

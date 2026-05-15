@@ -24,6 +24,7 @@ function makeEntry(overrides?: Partial<QueueEntry>): QueueEntry {
       phase: 'onset',
       fingerprint: 'abc123',
       count: 1,
+      periodCount: 0,
       suppressedSince: 0,
       firstSeen: Date.now(),
       lastSeen: Date.now(),

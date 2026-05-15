@@ -73,7 +73,7 @@ export function formatTelegramMessage(alert: FormattedAlert): string {
     case 'sustained': {
       const emoji = SEVERITY_EMOJI[alert.level] ?? SEVERITY_EMOJI.info
       parts.push(
-        `${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.count} \u00B7 peak: ${aggregation.peakRate.toFixed(1)}/s)</b>`,
+        `${emoji} <b>${badge} [${alert.level.toUpperCase()}] ${safeTitle} (x${aggregation.periodCount} since last update \u00B7 x${aggregation.count} total \u00B7 peak: ${aggregation.peakRate.toFixed(1)}/s)</b>`,
       )
       parts.push('', safeMessage)
       break
