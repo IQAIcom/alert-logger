@@ -14,6 +14,7 @@ function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
       phase: 'onset',
       fingerprint: 'abc123',
       count: 1,
+      periodCount: 0,
       suppressedSince: 0,
       firstSeen: Date.now(),
       lastSeen: Date.now(),
@@ -86,6 +87,7 @@ describe('formatDiscordEmbed', () => {
           phase: 'ramp',
           fingerprint: 'abc123',
           count: 10,
+          periodCount: 5,
           suppressedSince: 5,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -106,6 +108,7 @@ describe('formatDiscordEmbed', () => {
           phase: 'sustained',
           fingerprint: 'abc123',
           count: 200,
+          periodCount: 37,
           suppressedSince: 0,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -114,7 +117,8 @@ describe('formatDiscordEmbed', () => {
       })
       const embed = formatDiscordEmbed(alert)
 
-      expect(embed.title).toContain('x200')
+      expect(embed.title).toContain('x37 since last update')
+      expect(embed.title).toContain('x200 total')
       expect(embed.title).toContain('peak rate: 3.7/s')
     })
   })
@@ -127,6 +131,7 @@ describe('formatDiscordEmbed', () => {
           phase: 'resolution',
           fingerprint: 'abc123',
           count: 50,
+          periodCount: 0,
           suppressedSince: 0,
           firstSeen: now - 3_600_000,
           lastSeen: now,
@@ -146,6 +151,7 @@ describe('formatDiscordEmbed', () => {
           phase: 'resolution',
           fingerprint: 'abc123',
           count: 1,
+          periodCount: 0,
           suppressedSince: 0,
           firstSeen: Date.now(),
           lastSeen: Date.now(),

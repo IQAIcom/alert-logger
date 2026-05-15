@@ -15,6 +15,7 @@ function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
       phase: 'onset',
       fingerprint: 'abc123',
       count: 1,
+      periodCount: 0,
       suppressedSince: 0,
       firstSeen: Date.now(),
       lastSeen: Date.now(),
@@ -81,6 +82,7 @@ describe('formatTelegramMessage', () => {
           phase: 'ramp',
           fingerprint: 'abc123',
           count: 10,
+          periodCount: 5,
           suppressedSince: 5,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -101,6 +103,7 @@ describe('formatTelegramMessage', () => {
           phase: 'sustained',
           fingerprint: 'abc123',
           count: 200,
+          periodCount: 37,
           suppressedSince: 0,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -109,7 +112,8 @@ describe('formatTelegramMessage', () => {
       })
       const msg = formatTelegramMessage(alert)
 
-      expect(msg).toContain('x200')
+      expect(msg).toContain('x37 since last update')
+      expect(msg).toContain('x200 total')
       expect(msg).toContain('peak: 3.7/s')
     })
   })
@@ -122,6 +126,7 @@ describe('formatTelegramMessage', () => {
           phase: 'resolution',
           fingerprint: 'abc123',
           count: 50,
+          periodCount: 0,
           suppressedSince: 0,
           firstSeen: now - 3_600_000,
           lastSeen: now,
@@ -142,6 +147,7 @@ describe('formatTelegramMessage', () => {
           phase: 'resolution',
           fingerprint: 'abc123',
           count: 1,
+          periodCount: 0,
           suppressedSince: 0,
           firstSeen: Date.now(),
           lastSeen: Date.now(),

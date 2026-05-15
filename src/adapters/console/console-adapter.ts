@@ -56,7 +56,9 @@ export class ConsoleAdapter implements AlertAdapter {
       lines.push(`  fields: ${pairs}`)
     }
 
-    lines.push(`  count: ${aggregation.count} | phase: ${aggregation.phase}`)
+    lines.push(
+      `  count: ${aggregation.count} | periodCount: ${aggregation.periodCount} | phase: ${aggregation.phase}`,
+    )
 
     return lines.join('\n')
   }
@@ -72,6 +74,7 @@ export class ConsoleAdapter implements AlertAdapter {
       aggregation: {
         phase: alert.aggregation.phase,
         count: alert.aggregation.count,
+        periodCount: alert.aggregation.periodCount,
       },
     })
   }

@@ -25,6 +25,7 @@ export interface AggregationMeta {
   phase: AggregationPhase
   fingerprint: string
   count: number
+  periodCount: number
   suppressedSince: number
   firstSeen: number
   lastSeen: number
@@ -52,6 +53,8 @@ export interface NormalizerRule {
 
 export interface AggregationConfig {
   rampThreshold: number
+  rampExitRatePerSecond: number
+  rampExitRateWindowMs: number
   digestIntervalMs: number
   resolutionCooldownMs: number
 }
@@ -109,7 +112,9 @@ export interface ResolvedConfig {
 
 export const DEFAULT_AGGREGATION: AggregationConfig = {
   rampThreshold: 64,
-  digestIntervalMs: 5 * 60_000,
+  rampExitRatePerSecond: 0.5,
+  rampExitRateWindowMs: 60_000,
+  digestIntervalMs: 15 * 60_000,
   resolutionCooldownMs: 2 * 60_000,
 }
 

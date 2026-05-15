@@ -15,6 +15,7 @@ function makeEntry(id: number): QueueEntry {
         phase: 'onset',
         fingerprint: `fp-${id}`,
         count: 1,
+        periodCount: 0,
         suppressedSince: 0,
         firstSeen: Date.now(),
         lastSeen: Date.now(),

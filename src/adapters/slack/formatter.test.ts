@@ -14,6 +14,7 @@ function makeAlert(overrides: Partial<FormattedAlert> = {}): FormattedAlert {
       phase: 'onset',
       fingerprint: 'abc123',
       count: 1,
+      periodCount: 0,
       suppressedSince: 0,
       firstSeen: Date.now(),
       lastSeen: Date.now(),
@@ -97,6 +98,7 @@ describe('formatSlackPayload', () => {
           phase: 'ramp',
           fingerprint: 'abc123',
           count: 10,
+          periodCount: 5,
           suppressedSince: 5,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -116,6 +118,7 @@ describe('formatSlackPayload', () => {
           phase: 'resolution',
           fingerprint: 'abc123',
           count: 1,
+          periodCount: 0,
           suppressedSince: 0,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -137,6 +140,7 @@ describe('formatSlackPayload', () => {
           phase: 'ramp',
           fingerprint: 'abc123',
           count: 10,
+          periodCount: 5,
           suppressedSince: 5,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -158,6 +162,7 @@ describe('formatSlackPayload', () => {
           phase: 'sustained',
           fingerprint: 'abc123',
           count: 200,
+          periodCount: 37,
           suppressedSince: 0,
           firstSeen: Date.now(),
           lastSeen: Date.now(),
@@ -167,7 +172,8 @@ describe('formatSlackPayload', () => {
       const payload = formatSlackPayload(alert)
 
       const header = payload.attachments[0].blocks[0]
-      expect(header.text?.text).toContain('x200')
+      expect(header.text?.text).toContain('x37 since last update')
+      expect(header.text?.text).toContain('x200 total')
       expect(header.text?.text).toContain('peak: 3.7/s')
     })
   })
@@ -180,6 +186,7 @@ describe('formatSlackPayload', () => {
           phase: 'resolution',
           fingerprint: 'abc123',
           count: 50,
+          periodCount: 0,
           suppressedSince: 0,
           firstSeen: now - 3_600_000,
           lastSeen: now,
@@ -200,6 +207,7 @@ describe('formatSlackPayload', () => {
           phase: 'resolution',
           fingerprint: 'abc123',
           count: 1,
+          periodCount: 0,
           suppressedSince: 0,
           firstSeen: Date.now(),
           lastSeen: Date.now(),

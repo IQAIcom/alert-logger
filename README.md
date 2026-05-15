@@ -7,7 +7,7 @@ Stop drowning in alert storms. `@iqai/alert-logger` groups repeated errors using
 ## ✨ Features
 
 - **Unified API** — `logger.error('msg', error, { fields })` routes to every configured adapter
-- **Exponential suppression** — alerts fire at 1, 2, 4, 8, 16, 32, 64... then switch to periodic digests
+- **Rate-aware suppression** — alerts ramp quickly, then switch to quieter periodic updates when an incident is clearly ongoing
 - **Resolution detection** — get a "resolved" message when an error stops occurring
 - **Error fingerprinting** — same bug from different requests groups automatically (strips IDs, timestamps, UUIDs)
 - **Multi-channel routing** — route by severity level or custom tags to different channels
@@ -152,11 +152,13 @@ When the same error fires repeatedly, the library doesn't spam your channel:
 | Phase | Trigger | What gets sent |
 |-------|---------|----------------|
 | **Onset** | 1st occurrence | Full alert with stack trace, fields, tags |
-| **Ramp** | 2nd, 4th, 8th, 16th, 32nd, 64th | Compact: `"Payment failed (x8 — 4 suppressed)"` |
-| **Sustained** | >64 in window | Digest every 5min: `"x4,812 in last 5m"` |
+| **Ramp** | 2nd, 4th, 8th, 16th, 32nd, 64th until rate/count handoff | Compact: `"Payment failed (x8 — 4 suppressed)"` |
+| **Sustained** | >64 total, or current rate crosses threshold after at least one ramp alert | Digest every 15min: `"x37 since last update · x412 total"` |
 | **Resolution** | 0 hits for 2min | `"Resolved: Payment failed — 12,847 total over 23m"` |
 
 Errors are grouped by **fingerprint** — the library strips variable parts (IDs, timestamps, UUIDs, hex addresses) from the error message and hashes it with the top stack frames. Same bug, different request = same group.
+
+By default, the rate check uses a 1-minute sliding window and exits ramp early at `0.5` events/sec after the first ramp checkpoint has been sent.
 
 ## 🌍 Per-Environment Config
 
@@ -169,7 +171,7 @@ AlertLogger.init({
   environments: {
     production: {
       levels: ['warning', 'critical'],
-      aggregation: { digestIntervalMs: 5 * 60_000 },
+      aggregation: { digestIntervalMs: 15 * 60_000 },
     },
     staging: {
       levels: ['critical'],           // only errors, no warnings
@@ -177,7 +179,11 @@ AlertLogger.init({
     },
     development: {
       levels: ['critical'],
-      aggregation: { rampThreshold: 8, digestIntervalMs: 30 * 60_000 },
+      aggregation: {
+        rampThreshold: 8,
+        rampExitRatePerSecond: 0.25,
+        digestIntervalMs: 30 * 60_000,
+      },
     },
   },
 })
@@ -279,8 +285,10 @@ AlertLogger.init({
 
   // Aggregation tuning
   aggregation: {
-    rampThreshold: 64,             // switch from ramp to digest phase
-    digestIntervalMs: 5 * 60_000,  // how often to send digests
+    rampThreshold: 64,             // count-based handoff into sustained mode
+    rampExitRatePerSecond: 0.5,    // early sustained handoff after a ramp alert
+    rampExitRateWindowMs: 60_000,  // sliding window used for current-rate calculation
+    digestIntervalMs: 15 * 60_000, // how often to send sustained updates
     resolutionCooldownMs: 2 * 60_000, // silence before "resolved"
   },
 
