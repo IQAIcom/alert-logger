@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- [#21](https://github.com/IQAIcom/alert-logger/pull/21) [`3633fee`](https://github.com/IQAIcom/alert-logger/commit/3633fee337b1b42275e63e10dfad01d49257a639) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Make sustained alerting quieter and more informative by:
+- [#21](https://github.com/IQOfficial/alert-logger/pull/21) [`3633fee`](https://github.com/IQOfficial/alert-logger/commit/3633fee337b1b42275e63e10dfad01d49257a639) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Make sustained alerting quieter and more informative by:
 
   - adding rate-aware early handoff from ramp to sustained mode
   - changing the default sustained update interval from 5 minutes to 15 minutes
@@ -16,7 +16,7 @@
 
 ### Patch Changes
 
-- [`942e36f`](https://github.com/IQAIcom/alert-logger/commit/942e36fc5351232fc91f87dc57003a73a2326514) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix(fingerprinter): normalize numbers adjacent to unit letters
+- [`942e36f`](https://github.com/IQOfficial/alert-logger/commit/942e36fc5351232fc91f87dc57003a73a2326514) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix(fingerprinter): normalize numbers adjacent to unit letters
 
   The built-in `NUMBER_RE` used `\b\d+\b`, which failed to match digits
   immediately followed by word characters (e.g. `330s`, `120ms`). Messages
@@ -25,7 +25,7 @@
   onset and no suppression occurred. Loosened to `\d+` so duration/size
   suffixes are collapsed too.
 
-- [#20](https://github.com/IQAIcom/alert-logger/pull/20) [`3239f66`](https://github.com/IQAIcom/alert-logger/commit/3239f665ad30c04204adbefa12c06a76123464f9) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix(fingerprinter): run built-in normalizers before user-defined ones
+- [#20](https://github.com/IQOfficial/alert-logger/pull/20) [`3239f66`](https://github.com/IQOfficial/alert-logger/commit/3239f665ad30c04204adbefa12c06a76123464f9) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix(fingerprinter): run built-in normalizers before user-defined ones
 
   User-defined normalizers previously ran before the built-in ones, so a
   broad rule like `{ pattern: /\d+/g, replacement: "<num>" }` would strip
@@ -41,7 +41,7 @@
 
 ### Major Changes
 
-- [#16](https://github.com/IQAIcom/alert-logger/pull/16) [`bc50c1a`](https://github.com/IQAIcom/alert-logger/commit/bc50c1aaf4660872db6d81b3726b732d25e87794) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add Slack and Telegram adapters with adapter-owned routing
+- [#16](https://github.com/IQOfficial/alert-logger/pull/16) [`bc50c1a`](https://github.com/IQOfficial/alert-logger/commit/bc50c1aaf4660872db6d81b3726b732d25e87794) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add Slack and Telegram adapters with adapter-owned routing
 
   **Breaking changes:**
 
@@ -83,7 +83,7 @@
 
 ### Patch Changes
 
-- [#13](https://github.com/IQAIcom/alert-logger/pull/13) [`417688e`](https://github.com/IQAIcom/alert-logger/commit/417688e9ec62ac8540a88aa3e559e7648f3195dd) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix: improve default fingerprint aggregation to reduce alert noise
+- [#13](https://github.com/IQOfficial/alert-logger/pull/13) [`417688e`](https://github.com/IQOfficial/alert-logger/commit/417688e9ec62ac8540a88aa3e559e7648f3195dd) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - fix: improve default fingerprint aggregation to reduce alert noise
 
   - Normalize titles with the same rules used for messages (UUIDs, hex addresses, timestamps, numbers) so dynamic values in titles don't split fingerprints.
   - Reduce default `stackDepth` from 3 to 1 so the same error from different callers groups into a single aggregation stream. Users can restore the previous behavior with `fingerprint: { stackDepth: 3 }`.
@@ -92,7 +92,7 @@
 
 ### Minor Changes
 
-- [#11](https://github.com/IQAIcom/alert-logger/pull/11) [`44f5ee8`](https://github.com/IQAIcom/alert-logger/commit/44f5ee8eec9cd2b622c857e4b438b8d407893d16) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - feat: add `description` option and fix resolution noise
+- [#11](https://github.com/IQOfficial/alert-logger/pull/11) [`44f5ee8`](https://github.com/IQOfficial/alert-logger/commit/44f5ee8eec9cd2b622c857e4b438b8d407893d16) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - feat: add `description` option and fix resolution noise
 
   - Add `description` field to `AlertOptions` for separating short titles from detailed messages. When set, `description` is used as the embed body instead of the title.
   - Allow `error()` and `critical()` to accept `(title, options)` without an intermediate `undefined` error param.
@@ -103,13 +103,13 @@
 
 ### Patch Changes
 
-- [#9](https://github.com/IQAIcom/alert-logger/pull/9) [`c578183`](https://github.com/IQAIcom/alert-logger/commit/c5781833c3afc9acb062d22120cd6de7c0c45cbf) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add typesVersions for TypeScript moduleResolution "node" subpath type resolution
+- [#9](https://github.com/IQOfficial/alert-logger/pull/9) [`c578183`](https://github.com/IQOfficial/alert-logger/commit/c5781833c3afc9acb062d22120cd6de7c0c45cbf) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add typesVersions for TypeScript moduleResolution "node" subpath type resolution
 
 ## 0.3.0
 
 ### Minor Changes
 
-- [#6](https://github.com/IQAIcom/alert-logger/pull/6) [`83c2811`](https://github.com/IQAIcom/alert-logger/commit/83c281125fc637731f09c1753fa5c9702fc9f874) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add configurable HealthPolicy for adapter health/retry behavior
+- [#6](https://github.com/IQOfficial/alert-logger/pull/6) [`83c2811`](https://github.com/IQOfficial/alert-logger/commit/83c281125fc637731f09c1753fa5c9702fc9f874) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add configurable HealthPolicy for adapter health/retry behavior
 
   - New `health` config option with `unhealthyThreshold`, `healthWindowMs`, `drainIntervalMs`, `maxRetries`, and `entryExpiryMs`
   - Extract shared `formatDuration` utility to eliminate duplication between health-manager and discord formatter
@@ -118,13 +118,13 @@
 
 ### Patch Changes
 
-- [#8](https://github.com/IQAIcom/alert-logger/pull/8) [`0746d58`](https://github.com/IQAIcom/alert-logger/commit/0746d5833628db1af3d2d985031dd672c5fd484a) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add CommonJS build output alongside ESM for compatibility with projects using `moduleResolution: "node"`
+- [#8](https://github.com/IQOfficial/alert-logger/pull/8) [`0746d58`](https://github.com/IQOfficial/alert-logger/commit/0746d5833628db1af3d2d985031dd672c5fd484a) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Add CommonJS build output alongside ESM for compatibility with projects using `moduleResolution: "node"`
 
 ## 0.2.0
 
 ### Minor Changes
 
-- [`c31f9b9`](https://github.com/IQAIcom/alert-logger/commit/c31f9b99ed5b35fc3def62370a89875b924627df) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Initial release of @iqai/alert-logger with core engine, Discord/Console adapters, reliability layer, and NestJS/Next.js integrations.
+- [`c31f9b9`](https://github.com/IQOfficial/alert-logger/commit/c31f9b99ed5b35fc3def62370a89875b924627df) Thanks [@Royal-lobster](https://github.com/Royal-lobster)! - Initial release of @iqai/alert-logger with core engine, Discord/Console adapters, reliability layer, and NestJS/Next.js integrations.
 
 ## 0.1.0
 
